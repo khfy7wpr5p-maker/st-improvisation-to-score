@@ -71,7 +71,7 @@ jobs:
         working-directory: .integration/musicxml-to-guitar-tab-engine
         run: npm install --ignore-scripts --no-audit --no-fund
 
-      - name: Generate rights-clean WAV and MP3 improvisation fixture
+      - name: Generate rights-clean polyphonic WAV and MP3 fixture
         run: |
           python - <<'PY'
           import math
@@ -79,18 +79,19 @@ jobs:
           import wave
 
           sample_rate = 22050
-          # Two one-second pitched gestures. This is generated in CI and carries no third-party audio rights.
-          segments = [(440.0, 1.0), (523.251, 1.0)]
+          # Two one-second dyads. Generated entirely in CI; no third-party audio rights.
+          segments = [((440.0, 523.251), 1.0), ((440.0, 659.255), 1.0)]
           with wave.open('/tmp/st-improv-e2e.wav', 'wb') as output:
               output.setnchannels(1)
               output.setsampwidth(2)
               output.setframerate(sample_rate)
               frames = bytearray()
-              for frequency, seconds in segments:
+              for frequencies, seconds in segments:
                   frame_count = int(sample_rate * seconds)
                   for index in range(frame_count):
                       envelope = min(1.0, index / 400, (frame_count - index) / 400)
-                      value = int(0.35 * envelope * 32767 * math.sin(2 * math.pi * frequency * index / sample_rate))
+                      summed = sum(math.sin(2 * math.pi * frequency * index / sample_rate) for frequency in frequencies)
+                      value = int(0.32 * envelope * 32767 * (summed / len(frequencies)))
                       frames.extend(struct.pack('<h', value))
               output.writeframes(frames)
           PY
