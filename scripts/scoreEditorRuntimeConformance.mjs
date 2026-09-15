@@ -7,22 +7,26 @@ import {
   buildScoreDraft,
   createTeacherCorrectionLedger,
   exportMusicXmlFromEditor,
-  openScoreDraftInEditor,
+  openScoreDraftWithSourceIdentityInEditor,
   rational,
+  resolveScoreEditorSourceIdentity,
 } from '../src/index.js';
 
 const sdkEntry = process.argv[2];
 if (!sdkEntry) throw new Error('Score Editor public SDK entry path is required.');
 
 const sdkModule = await import(pathToFileURL(resolve(sdkEntry)).href);
-if (typeof sdkModule.createScoreEditorSdkV1 !== 'function') {
-  throw new Error('Pinned Score Editor public entry does not export createScoreEditorSdkV1().');
+if (typeof sdkModule.createScoreEditorSdkV1WithSourceIdentity !== 'function') {
+  throw new Error('Pinned Score Editor public entry does not export createScoreEditorSdkV1WithSourceIdentity().');
 }
 
-const sdk = sdkModule.createScoreEditorSdkV1();
+const sdk = sdkModule.createScoreEditorSdkV1WithSourceIdentity();
 if (sdk.version !== '1.0.0') throw new Error(`Unexpected Score Editor SDK version: ${sdk.version}`);
 if (sdk.supports('document') !== true) throw new Error('Pinned Score Editor SDK lacks document capability.');
 if (sdk.supports('authoring') !== true) throw new Error('Pinned Score Editor SDK lacks authoring capability.');
+if (!sdk.sourceIdentity || typeof sdk.sourceIdentity.listNoteMappings !== 'function') {
+  throw new Error('Pinned Score Editor SDK lacks the public sourceIdentity surface.');
+}
 
 const sha256Hex = async (text) => createHash('sha256').update(new TextEncoder().encode(text)).digest('hex');
 
@@ -43,41 +47,54 @@ const draft = buildScoreDraft([
 if (draft.status !== 'PASS') throw new Error(`Expected usable PASS draft, got ${draft.status}.`);
 if (draft.polyphonicProjection.voiceCount < 2) throw new Error('Runtime fixture must exercise source polyphony.');
 
-const opened = await openScoreDraftInEditor(sdk, draft, {
-  title: 'S06D Runtime Conformance',
+const opened = await openScoreDraftWithSourceIdentityInEditor(sdk, draft, {
+  title: 'S06E Runtime Conformance',
   partName: 'Transcription',
-  documentId: 'doc:s06d-runtime',
-  revisionId: 'rev:s06d-runtime',
+  documentId: 'doc:s06e-runtime',
+  revisionId: 'rev:s06e-runtime',
   sha256Hex,
 });
 
 if (!opened.ok) throw new Error(`Score Editor open failed: ${opened.code}: ${opened.message}`);
 if (!opened.revisionGuard) throw new Error('Score Editor did not expose a revision guard after MusicXML import.');
+if (!opened.sourceIdentity?.ok) throw new Error(`Source identity resolution failed: ${opened.sourceIdentity?.code ?? 'UNKNOWN'}`);
+if (opened.sourceIdentity.unresolvedSourceNoteIds.length !== 0) {
+  throw new Error(`Source identity left unresolved notes: ${opened.sourceIdentity.unresolvedSourceNoteIds.join(', ')}`);
+}
 
-const targetResult = sdk.selection.listTargets(opened.revisionGuard);
-if (!targetResult.ok) throw new Error(`Semantic target enumeration failed: ${targetResult.error.code}: ${targetResult.error.message}`);
-const eventTargets = targetResult.value.filter((target) => target.entityKind === 'event');
-if (eventTargets.length < 3) throw new Error(`Expected at least 3 semantic event targets, got ${eventTargets.length}.`);
+const bassMapping = opened.sourceIdentity.mappings.find((item) => item.sourceEventId === 'bass');
+if (!bassMapping) throw new Error('Source identity manifest did not resolve the bass source event.');
 
-const selected = sdk.selection.select(eventTargets[0].address, opened.revisionGuard);
-if (!selected.ok) throw new Error(`Semantic event selection failed: ${selected.error.code}: ${selected.error.message}`);
+const selected = sdk.selection.select(bassMapping.target.address, opened.revisionGuard);
+if (!selected.ok) throw new Error(`Semantic note selection failed: ${selected.error.code}: ${selected.error.message}`);
 const editResult = sdk.authoring.commitKeypad({
   expected: opened.revisionGuard,
   action: Object.freeze({ version: '1.0.0', actionId: 'duration.quarter' }),
-  nextRevisionId: 'rev:s06d-sdk-edit',
+  nextRevisionId: 'rev:s06e-sdk-edit',
 });
 if (!editResult.ok) throw new Error(`Public SDK authoring failed: ${editResult.error.code}: ${editResult.error.message}`);
 const editedGuard = sdk.getRevisionGuard();
-if (!editedGuard || editedGuard.revisionId !== 'rev:s06d-sdk-edit') {
+if (!editedGuard || editedGuard.revisionId !== 'rev:s06e-sdk-edit') {
   throw new Error('Public SDK authoring did not produce the requested revision.');
+}
+
+const staleIdentity = resolveScoreEditorSourceIdentity(sdk, opened.sourceIdentityManifest, opened.revisionGuard);
+if (staleIdentity.ok || staleIdentity.code !== 'STALE_REQUEST') {
+  throw new Error('Source identity revision guard did not fail closed for the stale pre-edit revision.');
+}
+const editedIdentity = resolveScoreEditorSourceIdentity(sdk, opened.sourceIdentityManifest, editedGuard);
+if (!editedIdentity.ok) throw new Error(`Edited source identity resolution failed: ${editedIdentity.code}: ${editedIdentity.message}`);
+const editedBassMapping = editedIdentity.mappings.find((item) => item.sourceNoteId === bassMapping.sourceNoteId);
+if (!editedBassMapping || editedBassMapping.sourceEventId !== bassMapping.sourceEventId) {
+  throw new Error('The same sourceNoteId did not resolve to the stable sourceEventId after the edit revision.');
 }
 
 const teacherLedger = createTeacherCorrectionLedger({ ledgerId: 'runtime:teacher-ledger' });
 const teacherEdit = applyScoreEditorTeacherEdit(draft, teacherLedger, {
   sdkVersion: sdk.version,
   actionId: 'duration.quarter',
-  sourceEventId: 'bass',
-  editorTargetId: JSON.stringify(eventTargets[0].address),
+  sourceEventId: editedBassMapping.sourceEventId,
+  editorTargetId: JSON.stringify(editedBassMapping.target.address),
   documentId: editedGuard.documentId,
   revisionBefore: opened.revisionGuard.revisionId,
   revisionAfter: editedGuard.revisionId,
@@ -95,15 +112,15 @@ if (draft.quantizedEvents.find((event) => event.eventId === 'bass')?.durationQua
   throw new Error('Teacher overlay mutated the original machine draft.');
 }
 
-const reopened = await openScoreDraftInEditor(sdk, teacherEdit.correctedDraft, {
-  title: 'S06D Teacher Overlay',
+const reopened = await openScoreDraftWithSourceIdentityInEditor(sdk, teacherEdit.correctedDraft, {
+  title: 'S06E Teacher Overlay',
   partName: 'Transcription',
-  documentId: 'doc:s06d-overlay',
-  revisionId: 'rev:s06d-overlay',
+  documentId: 'doc:s06e-overlay',
+  revisionId: 'rev:s06e-overlay',
   sha256Hex,
 });
-if (!reopened.ok || !reopened.revisionGuard) {
-  throw new Error(`Corrected ScoreDraft failed public SDK re-open: ${reopened.code ?? 'NO_GUARD'}: ${reopened.message ?? 'missing revision guard'}`);
+if (!reopened.ok || !reopened.revisionGuard || !reopened.sourceIdentity?.ok) {
+  throw new Error(`Corrected ScoreDraft failed source-identity SDK re-open: ${reopened.code ?? reopened.sourceIdentity?.code ?? 'NO_GUARD'}`);
 }
 
 const exported = exportMusicXmlFromEditor(sdk, reopened.revisionGuard);
@@ -117,11 +134,13 @@ if (!disposed.ok) throw new Error(`Score Editor SDK dispose failed: ${disposed.e
 process.stdout.write(`${JSON.stringify({
   status: 'PASS',
   sdkVersion: sdk.version,
-  teacherWorkflowCapability: sdk.supports('teacherWorkflow'),
   sourceDraftVoices: draft.polyphonicProjection.voiceCount,
   correctedDraftVoices: teacherEdit.correctedDraft.polyphonicProjection.voiceCount,
-  semanticEventTargetCount: eventTargets.length,
+  sourceIdentityMappingCount: opened.sourceIdentity.mappings.length,
+  stableSourceNoteId: bassMapping.sourceNoteId,
+  stableSourceEventId: editedBassMapping.sourceEventId,
   sdkEditedRevisionId: editedGuard.revisionId,
+  staleRevisionGuardRejected: true,
   overlayRevision: teacherEdit.ledger.revision,
   overlayAppliedCorrectionCount: teacherEdit.overlay.appliedCorrections.length,
   correctedBassDurationQuarter: correctedBass.durationQuarter,
