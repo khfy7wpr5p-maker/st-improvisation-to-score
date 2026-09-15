@@ -102,6 +102,13 @@ export {
 } from './pipeline/browserMusicXml.js';
 
 export {
+  GUITAR_CLEANUP_MAX_EVENTS,
+  GUITAR_CLEANUP_VERSION,
+  cleanGuitarPerformanceEvents,
+  reconstructGuitarDurations,
+} from './reconstruction/guitarCleanup.js';
+
+export {
   POLYPHONIC_MATERIALIZER_MAX_SEGMENTS,
   POLYPHONIC_MATERIALIZER_VERSION,
   materializePolyphonicScore,

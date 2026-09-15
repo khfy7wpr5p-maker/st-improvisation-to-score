@@ -12,6 +12,9 @@ import {
 } from './audioPrepare.js';
 
 const MODEL_URL = 'https://unpkg.com/@spotify/basic-pitch@1.0.1/model/model.json';
+const GUITAR_ONSET_THRESHOLD = 0.3;
+const GUITAR_FRAME_THRESHOLD = 0.25;
+const GUITAR_MIN_NOTE_LENGTH_FRAMES = 8;
 
 const $ = (id) => document.getElementById(id);
 const audioInput = $('audioInput');
@@ -177,7 +180,13 @@ async function transcribe(audioBuffer) {
   );
 
   setProgress(76, 'Notalar çözümleniyor', 'Pitch, başlangıç ve süre olayları hazırlanıyor.');
-  const frameNotes = outputToNotesPoly(frames, onsets, 0.3, 0.2, 5);
+  const frameNotes = outputToNotesPoly(
+    frames,
+    onsets,
+    GUITAR_ONSET_THRESHOLD,
+    GUITAR_FRAME_THRESHOLD,
+    GUITAR_MIN_NOTE_LENGTH_FRAMES,
+  );
   return noteFramesToTime(addPitchBendsToNoteEvents(contours, frameNotes));
 }
 
@@ -192,15 +201,30 @@ function renderWarnings(diagnostics) {
   }
 }
 
+function renderTempo(summary) {
+  const bpmText = `${Number(summary.bpm).toFixed(1).replace('.0', '')} BPM`;
+  const alternatives = Array.isArray(summary.tempoAlternatives)
+    ? summary.tempoAlternatives.filter((value) => Math.abs(Number(value) - Number(summary.bpm)) > 0.01)
+    : [];
+  if (alternatives.length === 0) return bpmText;
+  return `${bpmText} · alternatif: ${alternatives.map((value) => Number(value).toFixed(1).replace('.0', '')).join(' / ')}`;
+}
+
 function renderResult(result) {
   const blob = new Blob([result.musicXml], { type: 'application/vnd.recordare.musicxml+xml;charset=utf-8' });
   if (outputUrl) URL.revokeObjectURL(outputUrl);
   outputUrl = URL.createObjectURL(blob);
   outputFileName = `${sanitizeStem(selectedFile.name)}.musicxml`;
 
-  noteCount.textContent = String(result.summary.detectedEventCount ?? '—');
+  const rawCount = result.summary.detectedEventCount ?? null;
+  const retainedCount = result.summary.retainedEventCount ?? rawCount;
+  noteCount.textContent = rawCount == null
+    ? '—'
+    : retainedCount === rawCount
+      ? String(rawCount)
+      : `${retainedCount} / ${rawCount}`;
   voiceCount.textContent = result.summary.voiceCount == null ? '—' : String(result.summary.voiceCount);
-  tempoResult.textContent = `${Number(result.summary.bpm).toFixed(1).replace('.0', '')} BPM`;
+  tempoResult.textContent = renderTempo(result.summary);
   meterResult.textContent = result.summary.meter;
   statusBadge.textContent = result.status === 'PASS' ? 'PASS' : 'REVIEW';
   statusBadge.className = `status-badge ${result.status === 'PASS' ? 'pass' : 'review'}`;
@@ -238,7 +262,7 @@ async function convert() {
     const noteEvents = await transcribe(audioBuffer);
     if (noteEvents.length === 0) throw new Error('Basic Pitch bu kayıtta kullanılabilir nota olayı bulamadı.');
 
-    setProgress(84, 'Ritim ve polifoni kuruluyor', 'ST reconstruction engine MusicXML taslağını hazırlıyor.');
+    setProgress(84, 'Ritim ve polifoni kuruluyor', 'Gitar temizleme ve ST reconstruction engine MusicXML taslağını hazırlıyor.');
     const [meterNumerator, meterDenominator] = meterSelect.value.split('/').map(Number);
     const result = buildBrowserMusicXmlFromBasicPitch({
       noteEvents,

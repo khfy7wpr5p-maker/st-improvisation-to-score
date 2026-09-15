@@ -115,6 +115,28 @@ The first user-facing application is intentionally narrow:
 - GitHub Pages was intentionally removed from the active deployment path because the repository Pages feature is not enabled;
 - S10 teacher acceptance remains the authority for real-world quality claims.
 
-## S11C — Real-device Browser Audio Smoke — NEXT
+## S11C — Real-device Browser Audio Smoke — COMPLETE
 
-Open the production browser MVP on the target phone/desktop, run a short WAV/MP3 through the in-browser Basic Pitch model, verify progress and MusicXML download, then run the longer user-owned guitar improvisation. Browser/device memory or codec problems should be handled as local capability diagnostics rather than by weakening the musical reconstruction contract.
+The browser audio preparation path now normalizes decoded input to mono 22,050 Hz before Basic Pitch inference. This removes the real-device 44.1/48 kHz model-input mismatch without changing score authority or uploading user audio.
+
+## S12 — Guitar Cleanup and Musical Reconstruction — IMPLEMENTED / CI + PRIVATE ACCEPTANCE PENDING
+
+S12 inserts a reversible musical reconstruction layer between raw browser Basic Pitch evidence and score quantization:
+
+`Basic Pitch raw -> Guitar Cleanup -> attack consolidation -> conservative tempo decision -> duration reconstruction -> quantization/polyphony -> MusicXML`
+
+Implemented behavior:
+
+- raw Basic Pitch events remain immutable and traceable;
+- bounded short/weak acoustic candidates can be suppressed only from the derived view;
+- near-simultaneous guitar attacks share a musical attack anchor while raw timing is preserved;
+- near-simultaneous duplicate pitches can be consolidated with provenance;
+- optional pitch-range priors are disabled by default and never assume one universal guitar range;
+- half/double tempo ambiguity no longer silently forces the higher BPM grid; alternatives remain visible and the lower rival is provisional when no user BPM is supplied;
+- acoustic sustain is no longer directly authoritative for written duration; re-articulation, chord changes and rhythm-grid evidence can reconstruct duration;
+- the existing dynamic `POLYPHONY_IS_DEFAULT` allocator remains uncapped and genuine independent strands can still create additional voices;
+- repeated diagnostics are grouped instead of flooding the browser result;
+- browser results expose raw vs retained event counts, derived voice count and tempo alternatives;
+- MusicXML remains available under `REVIEW_REQUIRED`.
+
+Final merge requires Node 20/22 CI, real-audio E2E, Score Editor runtime and Guitar TAB runtime gates. The user-owned recording remains private; actual before/after values for the observed ~709 raw events / 6 voices / ~215.5 BPM case require a local/private rerun and teacher review before any accuracy claim.
