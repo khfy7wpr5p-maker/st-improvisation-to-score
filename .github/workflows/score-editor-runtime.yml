@@ -29,7 +29,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: khfy7wpr5p-maker/st-score-editor-core
-          ref: e281d52881aaad0fade574a944251b12ea752038
+          ref: 4d8920c81ebb34af31f62f4a8e9ba24a4d7d7e15
           path: .integration/st-score-editor-core
 
       - name: Install Score Editor Core
