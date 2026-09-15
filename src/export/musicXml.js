@@ -1,6 +1,6 @@
 import { ImprovisationToScoreError, rational } from '../contracts.js';
 
-export const SCORE_DRAFT_MUSICXML_VERSION = '0.2.0';
+export const SCORE_DRAFT_MUSICXML_VERSION = '0.3.0';
 export const SCORE_DRAFT_MUSICXML_MAX_DIVISIONS = 16_384;
 
 function fail(code, message, details = {}) {
@@ -56,6 +56,10 @@ function chooseDivisions(draft) {
   };
 
   include(draft.measureLengthQuarter);
+  for (const measure of draft.measureTopology?.measures ?? []) {
+    include(measure.lengthQuarter);
+    include(measure.nominalLengthQuarter);
+  }
   for (const voice of draft.polyphonicProjection?.voices ?? []) {
     for (const measure of voice.measures) {
       for (const note of measure.notes) {
@@ -146,7 +150,7 @@ function noteLines(segment, durationUnits, voiceNumber, chord, indent) {
   return lines;
 }
 
-function restLines(rest, durationUnits, voiceNumber, indent) {
+function restLines(durationUnits, voiceNumber, indent) {
   return [
     `${indent}<note>`,
     `${indent}  <rest/>`,
@@ -194,7 +198,7 @@ function serializeVoiceMeasure(measure, voiceNumber, divisions, measureUnits) {
 
     if (item.kind === 'rest') {
       const durationUnits = xmlUnits(item.rest.durationQuarter, divisions, 'rest.duration');
-      lines.push(...restLines(item.rest, durationUnits, voiceNumber, '      '));
+      lines.push(...restLines(durationUnits, voiceNumber, '      '));
       cursorUnits = onsetUnits + durationUnits;
       continue;
     }
@@ -229,18 +233,46 @@ function normalizedClef(options) {
   return Object.freeze({ sign, line });
 }
 
+function fallbackTopology(draft) {
+  const count = Math.max(1, draft.measures?.length ?? 0);
+  const result = [];
+  let start = rational(0, 1);
+  for (let index = 0; index < count; index += 1) {
+    const end = rational(
+      start.numerator * draft.measureLengthQuarter.denominator + draft.measureLengthQuarter.numerator * start.denominator,
+      start.denominator * draft.measureLengthQuarter.denominator,
+    );
+    result.push(Object.freeze({
+      measureIndex: index,
+      startQuarter: start,
+      endQuarter: end,
+      lengthQuarter: draft.measureLengthQuarter,
+      nominalLengthQuarter: draft.measureLengthQuarter,
+      meterNumerator: draft.context.meterNumerator,
+      meterDenominator: draft.context.meterDenominator,
+      meterChangeAtStart: index === 0,
+      implicit: false,
+      isPickup: false,
+      boundaryReason: 'FULL_MEASURE',
+    }));
+    start = end;
+  }
+  return result;
+}
+
 export function serializeScoreDraftToMusicXml(draft, options = {}) {
   if (!draft || typeof draft !== 'object' || !draft.polyphonicProjection || !draft.context) {
     fail('INVALID_SCORE_DRAFT', 'A ScoreDraft with polyphonicProjection and context is required.');
   }
 
   const divisions = chooseDivisions(draft);
-  const measureUnits = xmlUnits(draft.measureLengthQuarter, divisions, 'measureLengthQuarter');
   const partName = typeof options.partName === 'string' && options.partName.trim() ? options.partName.trim() : 'Transcription Draft';
   const clef = normalizedClef(options);
   const voices = [...draft.polyphonicProjection.voices].sort((a, b) => a.voiceId.localeCompare(b.voiceId, undefined, { numeric: true }));
   const voiceNumber = new Map(voices.map((voice, index) => [voice.voiceId, index + 1]));
-  const measureCount = Math.max(1, draft.measures?.length ?? 0, ...voices.map((voice) => voice.lastMeasureIndex + 1));
+  const topology = draft.measureTopology?.measures ?? fallbackTopology(draft);
+  const highestVoiceMeasure = voices.length === 0 ? 0 : Math.max(...voices.map((voice) => voice.lastMeasureIndex + 1));
+  if (highestVoiceMeasure > topology.length) fail('MUSICXML_TOPOLOGY_TOO_SHORT', 'Measure topology does not cover projected voices.', { highestVoiceMeasure, topologyMeasureCount: topology.length });
 
   const lines = [
     '<?xml version="1.0" encoding="UTF-8"?>',
@@ -253,15 +285,24 @@ export function serializeScoreDraftToMusicXml(draft, options = {}) {
     '  <part id="P1">',
   ];
 
-  for (let measureIndex = 0; measureIndex < measureCount; measureIndex += 1) {
-    lines.push(`    <measure number="${measureIndex + 1}">`);
+  for (let measureIndex = 0; measureIndex < topology.length; measureIndex += 1) {
+    const topologyMeasure = topology[measureIndex];
+    const measureUnits = xmlUnits(topologyMeasure.lengthQuarter, divisions, `measure[${measureIndex}].length`);
+    const implicitAttribute = topologyMeasure.implicit ? ' implicit="yes"' : '';
+    lines.push(`    <measure number="${measureIndex + 1}"${implicitAttribute}>`);
     lines.push('      <attributes>');
     lines.push(`        <divisions>${divisions}</divisions>`);
-    if (measureIndex === 0) {
+    const previous = measureIndex > 0 ? topology[measureIndex - 1] : null;
+    const meterChanged = previous === null ||
+      previous.meterNumerator !== topologyMeasure.meterNumerator ||
+      previous.meterDenominator !== topologyMeasure.meterDenominator;
+    if (meterChanged || topologyMeasure.meterChangeAtStart) {
       lines.push('        <time>');
-      lines.push(`          <beats>${draft.context.meterNumerator}</beats>`);
-      lines.push(`          <beat-type>${draft.context.meterDenominator}</beat-type>`);
+      lines.push(`          <beats>${topologyMeasure.meterNumerator}</beats>`);
+      lines.push(`          <beat-type>${topologyMeasure.meterDenominator}</beat-type>`);
       lines.push('        </time>');
+    }
+    if (measureIndex === 0) {
       lines.push('        <clef>');
       lines.push(`          <sign>${escapeText(clef.sign)}</sign>`);
       lines.push(`          <line>${clef.line}</line>`);
@@ -292,10 +333,20 @@ export function serializeScoreDraftToMusicXml(draft, options = {}) {
 
 export function createScoreDraftMusicXmlManifest(draft) {
   const segments = draft?.polyphonicProjection?.segments ?? [];
+  const topology = draft?.measureTopology?.measures ?? [];
   return Object.freeze({
-    schemaVersion: 'score-draft-musicxml-manifest-v0.1',
+    schemaVersion: 'score-draft-musicxml-manifest-v0.2',
     serializerVersion: SCORE_DRAFT_MUSICXML_VERSION,
     scoreDraftSchemaVersion: draft?.schemaVersion ?? null,
+    measures: Object.freeze(topology.map((measure) => Object.freeze({
+      measureIndex: measure.measureIndex,
+      lengthQuarter: measure.lengthQuarter,
+      meterNumerator: measure.meterNumerator,
+      meterDenominator: measure.meterDenominator,
+      implicit: measure.implicit,
+      isPickup: measure.isPickup,
+      boundaryReason: measure.boundaryReason,
+    }))),
     sourceEvents: Object.freeze([...new Set(segments.map((segment) => segment.sourceEventId))].map((sourceEventId) => Object.freeze({
       sourceEventId,
       segments: Object.freeze(segments

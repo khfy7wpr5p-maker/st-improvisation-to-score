@@ -36,21 +36,21 @@ Repository-owned provisional tempo/meter change maps with strict ordering, origi
 ## S05B — Piecewise Tempo Mapping — COMPLETE
 Boundary-aware quarter/seconds conversion, independent onset/offset mapping across tempo changes and ScoreDraft support for multi-segment tempo maps.
 
-## S05C — Local Tempo Segment Evidence — CURRENT
+## S05C — Local Tempo Segment Evidence — COMPLETE
+Regional beat-window analysis, local tempo changes fitted to observed beat endpoints and non-blocking provisional fallback when timing evidence is weak or ambiguous.
 
-- analyze provider beat timelines in overlapping local windows;
-- preserve half/double and low-confidence uncertainty instead of hard blocking;
-- derive bounded local tempo change proposals from stable regional beat evidence;
-- fit admitted local segments to observed beat endpoints;
-- keep user-entered BPM higher authority than automatic evidence;
-- if local evidence is weak, still emit an editable provisional draft from the best tempo candidate;
-- preserve original pitch identity and source seconds;
-- keep meter fixed in this stage; variable measure boundaries remain S05D.
+## S05D — Changing Meter / Pickup Projection — CURRENT
 
-## S05D — Changing Meter / Pickup Projection — NEXT
-Materialize meter changes and pickup structure into variable measure boundaries without discarding the provisional timing map.
+- materialize variable measure boundaries from TimingMap meter changes;
+- preserve off-barline meter changes as shortened implicit transition measures instead of rejecting the score;
+- support explicit pickup/anacrusis length as an implicit first measure;
+- split sustained notes/ties across variable boundaries;
+- create per-voice rests using each measure's actual length;
+- emit MusicXML time changes and `implicit="yes"` measures;
+- preserve constant-meter behavior unchanged;
+- keep pickup inference itself separate from explicit pickup materialization.
 
-## S06 — Teacher Calibration
+## S06 — Teacher Calibration — NEXT
 Versioned teacher corrections, separate pitch/onset/duration/rhythm/voice metrics and calibrated confidence.
 
 ## S07 — Optional Guitar TAB Handoff

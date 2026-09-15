@@ -94,6 +94,15 @@ export {
 } from './timing/localTempoSegments.js';
 
 export {
+  MEASURE_TOPOLOGY_MAX_MEASURES,
+  MEASURE_TOPOLOGY_VERSION,
+  buildMeasureTopology,
+  describeMeasureTopology,
+  measureAtQuarter,
+  measureTopologyEndQuarter,
+} from './timing/measureTopology.js';
+
+export {
   TIMING_MAP_AUTHORITY,
   TIMING_MAP_MAX_CHANGES,
   TIMING_MAP_VERSION,
