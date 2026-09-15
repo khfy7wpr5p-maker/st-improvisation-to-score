@@ -15,27 +15,26 @@ Dynamic voice strands, continuation candidates and non-blocking ambiguity metada
 ## S02C — Polyphonic Materialization — COMPLETE
 Reversible per-voice measure projection, `VOICE_GAP` rests, multi-measure tie candidates and corrected global-silence coverage.
 
-## S03A — Score Editor Public Bridge — CURRENT
+## S03A — Score Editor Public Bridge — COMPLETE
+Bounded MusicXML projection plus public Score Editor SDK `1.0.0` bridge; standalone MusicXML survives editor failure.
 
-- serialize reversible projection to bounded MusicXML 4.0;
-- preserve source-event -> projected-segment sidecar manifest;
-- emit multi-voice streams with MusicXML `backup`;
-- emit chord and cross-measure tie semantics;
-- integrate through injected Score Editor SDK `1.0.0` only;
-- use public `document.openMusicXml` / `document.exportMusicXml` operations;
-- preserve standalone MusicXML if SDK/capability/import fails;
-- never import Editor Core private package paths.
+## S03B — Editor Runtime Conformance — COMPLETE
+Pinned real `st-score-editor-core` runtime builds and accepts/exports the generated polyphonic MusicXML through the public SDK boundary.
 
-## S03B — Editor Runtime Conformance — NEXT
+## S04A — Tempo Candidate Analysis — CURRENT
 
-- run the bridge against the real Score Editor public SDK runtime in an integration environment;
-- verify generated MusicXML open/export round trip;
-- verify semantic targets and revision guard behavior;
-- preserve source-event manifest alongside editor document identity;
-- keep renderer/playback/optional-capability failures local.
+- collapse near-simultaneous note attacks before timing analysis;
+- generate bounded BPM hypotheses from inter-attack intervals;
+- rank candidates against admitted rhythm grids;
+- preserve half/double ambiguity explicitly;
+- return user/teacher guidance for weak evidence instead of rejection;
+- keep candidate authority non-canonical.
 
-## S04 — Automatic Beat / Tempo
-Beat/onset provider, tempo candidates and TempoMap/MeterMap inference. Low confidence falls back to user guidance rather than rejection.
+## S04B — Beat / Tempo Provider
+Adapter for stronger audio beat evidence, beat phase and provider confidence. Admit automatic BPM only when independent beat evidence clears bounded consistency gates.
+
+## S04C — Meter Candidates
+Meter/accent candidates and initial TempoMap/MeterMap projection; ambiguous meter stays provisional.
 
 ## S05 — Rubato / Expressive Time
 Local tempo segments, phrase-aware quantization and pickup inference without changing pitch-event identity.

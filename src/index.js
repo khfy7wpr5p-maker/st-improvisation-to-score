@@ -57,3 +57,10 @@ export {
   VOICE_CANDIDATE_MAX_EVENTS,
   analyzeVoiceCandidates,
 } from './polyphony/voiceCandidates.js';
+
+export {
+  TEMPO_CANDIDATE_ANALYZER_VERSION,
+  TEMPO_CANDIDATE_AUTHORITY,
+  TEMPO_CANDIDATE_MAX_EVENTS,
+  analyzeTempoCandidates,
+} from './timing/tempoCandidates.js';
