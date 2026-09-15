@@ -19,6 +19,7 @@ const context = {
 test('pickup measure serializes as implicit while preserving the declared meter', () => {
   const draft = buildScoreDraft([
     { eventId: 'pickup-note', midiPitch: 60, onsetSeconds: 0, offsetSeconds: 0.5 },
+    { eventId: 'after-pickup', midiPitch: 62, onsetSeconds: 0.5, offsetSeconds: 1.0 },
   ], context, { pickupLengthQuarter: rational(1, 1) });
   const xml = serializeScoreDraftToMusicXml(draft);
 
