@@ -6,7 +6,7 @@ Teacher-first transcription pipeline for turning user-owned improvisation audio 
 
 ```text
 MP3/WAV/M4A/FLAC/OGG
-  -> Basic Pitch provider
+  -> host-injected Basic Pitch provider
   -> RawPerformanceEvent[]
   -> rational musical time + quantization
   -> sonority analysis
@@ -33,6 +33,14 @@ MIDI remains optional diagnostic/export data. It is not the canonical bridge fro
 - **S04A–S05D Timing — complete:** tempo/meter candidates, provider admission, piecewise timing, local tempo and changing-meter/pickup projection.
 - **S06A–S06E Teacher Workflow — complete:** append-only teacher ledger, calibration, reversible overlay, public authoring receipts and durable source identity through Score Editor edits.
 - **S07 Optional Guitar TAB — complete:** reviewed MusicXML -> optional pinned Guitar TAB capability; TAB failure remains local and source notation stays usable.
+- **S08 End-to-End Audio Runner — complete:** host-injected real-audio provider -> ScoreDraft -> MusicXML -> optional Score Editor/TAB orchestration.
+- **S09 Real MP3 Runtime Acceptance — complete:** a rights-clean polyphonic MP3 passed through real Basic Pitch 0.4.0 inference, Score Editor source identity and the optional Guitar TAB runtime.
+
+## Real-audio gate evidence
+
+The completed S09 gate produced 5 Basic Pitch note events, 5 quantized score events and a 2-voice draft. Score Editor opened the generated MusicXML and resolved all 5 source identities. The Guitar TAB runtime returned `TAB_READY`, `generateTab: true` and `export: true`, while preserving the source MusicXML.
+
+This proves the runtime integration path, not zero-error transcription quality on arbitrary performances. The project is now ready for teacher acceptance testing with user-owned MP3/WAV improvisations.
 
 ## Product policy
 
@@ -50,14 +58,22 @@ MIDI remains optional diagnostic/export data. It is not the canonical bridge fro
 ## Authority layers
 
 ```text
-RawPerformanceEvent        provider evidence
-QuantizedEvent             repository timing draft
-VoiceCandidateAnalysis     NON_CANONICAL_HINT
-PolyphonicProjection       REVERSIBLE_HEURISTIC_PROJECTION
-MusicXML                   interchange/review projection
-Score Editor canonical doc teacher-edit authority after admitted import
-Guitar TAB                 optional derived performance/arrangement artifact
+Audio bytes                 immutable user/source input
+Basic Pitch result          provider evidence
+RawPerformanceEvent         repository transcription evidence
+QuantizedEvent              repository timing draft
+VoiceCandidateAnalysis      NON_CANONICAL_HINT
+PolyphonicProjection        REVERSIBLE_HEURISTIC_PROJECTION
+MusicXML                    interchange/review projection
+Score Editor canonical doc  teacher-edit authority after admitted import
+Guitar TAB                  optional derived performance/arrangement artifact
 ```
+
+## Audio boundary
+
+S08 does not install or own Basic Pitch. The host injects a compatible transcription provider. S09 continuously tests the existing Correction Engine Basic Pitch provider pinned to `basic-pitch==0.4.0` against a rights-clean MP3 generated in CI.
+
+The current end-to-end runner still accepts an explicit timing context for score reconstruction. It does not silently invent BPM/meter when that evidence is unavailable.
 
 ## Score Editor boundary
 

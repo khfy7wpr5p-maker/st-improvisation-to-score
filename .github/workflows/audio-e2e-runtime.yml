@@ -1,0 +1,111 @@
+name: Real Audio End-to-End Conformance
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  real-mp3-e2e:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout transcription pipeline
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install transcription pipeline
+        run: npm install --ignore-scripts --no-audit --no-fund
+
+      - name: Checkout pinned Basic Pitch provider host
+        uses: actions/checkout@v4
+        with:
+          repository: khfy7wpr5p-maker/st-omr-correction-engine
+          ref: 122725676cb1f2cb0eddb05d791bd11abea13b32
+          path: .integration/st-omr-correction-engine
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: .integration/st-omr-correction-engine/providers/basic-pitch/requirements.txt
+
+      - name: Install Basic Pitch provider host
+        working-directory: .integration/st-omr-correction-engine
+        run: npm install --ignore-scripts --no-audit --no-fund
+
+      - name: Install pinned Basic Pitch runtime
+        run: python -m pip install --disable-pip-version-check -r .integration/st-omr-correction-engine/providers/basic-pitch/requirements.txt
+
+      - name: Checkout pinned Score Editor Core
+        uses: actions/checkout@v4
+        with:
+          repository: khfy7wpr5p-maker/st-score-editor-core
+          ref: 4d8920c81ebb34af31f62f4a8e9ba24a4d7d7e15
+          path: .integration/st-score-editor-core
+
+      - name: Install and build Score Editor public SDK
+        working-directory: .integration/st-score-editor-core
+        run: |
+          npm install --ignore-scripts --no-audit --no-fund
+          npm run build
+
+      - name: Checkout pinned Guitar TAB engine
+        uses: actions/checkout@v4
+        with:
+          repository: khfy7wpr5p-maker/musicxml-to-guitar-tab-engine
+          ref: 1d8ced644f544f7e991f7275eda77a2ce557774e
+          path: .integration/musicxml-to-guitar-tab-engine
+
+      - name: Install Guitar TAB engine
+        working-directory: .integration/musicxml-to-guitar-tab-engine
+        run: npm install --ignore-scripts --no-audit --no-fund
+
+      - name: Generate rights-clean polyphonic WAV and MP3 fixture
+        run: |
+          python - <<'PY'
+          import math
+          import struct
+          import wave
+
+          sample_rate = 22050
+          # Two one-second dyads. Generated entirely in CI; no third-party audio rights.
+          segments = [((440.0, 523.251), 1.0), ((440.0, 659.255), 1.0)]
+          with wave.open('/tmp/st-improv-e2e.wav', 'wb') as output:
+              output.setnchannels(1)
+              output.setsampwidth(2)
+              output.setframerate(sample_rate)
+              frames = bytearray()
+              for frequencies, seconds in segments:
+                  frame_count = int(sample_rate * seconds)
+                  for index in range(frame_count):
+                      envelope = min(1.0, index / 400, (frame_count - index) / 400)
+                      summed = sum(math.sin(2 * math.pi * frequency * index / sample_rate) for frequency in frequencies)
+                      value = int(0.32 * envelope * 32767 * (summed / len(frequencies)))
+                      frames.extend(struct.pack('<h', value))
+              output.writeframes(frames)
+          PY
+          if ! command -v ffmpeg >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y ffmpeg
+          fi
+          ffmpeg -y -loglevel error -i /tmp/st-improv-e2e.wav -codec:a libmp3lame -q:a 4 /tmp/st-improv-e2e.mp3
+          test -s /tmp/st-improv-e2e.mp3
+
+      - name: Run real MP3 -> Basic Pitch -> Score -> Editor -> TAB chain
+        run: |
+          node scripts/audioE2ERuntimeConformance.mjs \
+            .integration/st-omr-correction-engine/providers/basic-pitch/basicPitchProvider.js \
+            .integration/st-score-editor-core/dist/packages/score-editor-sdk-v1/public.js \
+            .integration/musicxml-to-guitar-tab-engine/src/app/musicXmlUploadRuntime.js \
+            /tmp/st-improv-e2e.mp3

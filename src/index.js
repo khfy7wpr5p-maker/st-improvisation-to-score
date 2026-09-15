@@ -78,6 +78,11 @@ export {
 } from './export/musicXml.js';
 
 export {
+  AUDIO_TO_SCORE_PIPELINE_VERSION,
+  runAudioToScorePipeline,
+} from './pipeline/audioToScore.js';
+
+export {
   POLYPHONIC_MATERIALIZER_MAX_SEGMENTS,
   POLYPHONIC_MATERIALIZER_VERSION,
   materializePolyphonicScore,

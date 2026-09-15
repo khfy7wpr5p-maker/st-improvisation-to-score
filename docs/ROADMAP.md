@@ -58,12 +58,25 @@ Public authoring receipts feed teacher ledger/overlay rebuild without importing 
 Dedicated Score Editor handoff MusicXML carries safe per-segment source-note ids; public SDK revision-aware mappings resolve them back to stable repository `sourceEventId` values.
 
 ## S07 — Optional Guitar TAB Handoff — COMPLETE
+Capability-driven polyphonic TAB runtime is optional and downstream; source score authority survives TAB failure or review status.
 
-- consume reviewed MusicXML through a host-injected Guitar TAB capability;
-- prefer the pinned engine's capability-driven polyphonic application runtime, with the narrower package-root converter only as a fallback for compatible simple scores;
-- keep TAB derived and optional, never canonical score authority;
-- preserve source MusicXML when the TAB engine is absent, runtime-blocked or fails conversion;
-- preserve provisional/review-required TAB when the runtime reports `generateTab` capability instead of treating teacher review as a global lock;
-- isolate optional artifact failures to the affected artifact;
-- pin and continuously test the real `musicxml-to-guitar-tab-engine` runtime;
-- never let TAB failure invalidate source notation or Score Editor work.
+## S08 — End-to-End Audio Runner — COMPLETE
+
+- host-injected real-audio transcription provider without adding Basic Pitch to the core dependency graph;
+- verified Basic Pitch result -> ScoreDraft -> MusicXML through one repository-owned orchestration boundary;
+- optional Score Editor source-identity open and optional Guitar TAB handoff;
+- Editor/TAB failures remain local and cannot change a valid source-score status.
+
+## S09 — Real MP3 Runtime Acceptance — COMPLETE
+
+A rights-clean polyphonic MP3 was generated in CI and passed through the real pinned runtime chain:
+
+- `basic-pitch==0.4.0` produced 5 note events;
+- all 5 events reached quantized ScoreDraft evidence;
+- reconstructed draft contained 2 voices;
+- generated MusicXML was 1,766 bytes;
+- Score Editor opened successfully and resolved all 5 source identities;
+- Guitar TAB returned `TAB_READY` with `generateTab: true` and `export: true`;
+- source MusicXML remained preserved through the TAB handoff.
+
+Infrastructure acceptance is therefore complete. The next validation phase is teacher acceptance/quality testing with user-owned improvisation MP3/WAV recordings, recording corrections by pitch/onset/duration/rhythm/voice/meter rather than adding more infrastructure before evidence requires it.
