@@ -29,7 +29,7 @@ test('S11 browser adapter converts Basic Pitch TS note times without MIDI as aut
   assert.equal(batch.provenance.audioSha256, 'a'.repeat(64));
 });
 
-test('S11 browser pipeline produces downloadable MusicXML with explicit user BPM', () => {
+test('S12 browser pipeline preserves raw count and reports retained musical events with explicit user BPM', () => {
   const result = buildBrowserMusicXmlFromBasicPitch({
     noteEvents: notes,
     audioFileName: 'improv.wav',
@@ -43,11 +43,14 @@ test('S11 browser pipeline produces downloadable MusicXML with explicit user BPM
   assert.equal(result.summary.bpm, 120);
   assert.equal(result.summary.bpmSource, 'USER');
   assert.equal(result.summary.detectedEventCount, 4);
+  assert.equal(result.summary.retainedEventCount, 4);
+  assert.equal(result.transcription.rawEvents.length, 4);
+  assert.equal(result.guitarCleanup.rawEvents.length, 4);
   assert.match(result.musicXml, /<score-partwise/);
   assert.equal(result.diagnostics.some((item) => item.code === 'BROWSER_DEFAULT_METER_REQUIRES_REVIEW'), false);
 });
 
-test('S11 auto timing stays non-blocking and exposes provisional warnings', () => {
+test('S12 auto timing stays non-blocking and exposes conservative half/double alternatives', () => {
   const result = buildBrowserMusicXmlFromBasicPitch({
     noteEvents: notes,
     audioFileName: 'improv.wav',
@@ -59,4 +62,49 @@ test('S11 auto timing stays non-blocking and exposes provisional warnings', () =
   assert.equal(result.summary.bpmSource, 'AUTO_PROVISIONAL');
   assert.ok(result.summary.bpm > 0);
   assert.ok(result.diagnostics.some((item) => item.code === 'BROWSER_DEFAULT_METER_REQUIRES_REVIEW'));
+
+  if (result.tempo.ambiguity.halfDouble) {
+    assert.ok(result.summary.tempoAlternatives.length > 1);
+    assert.equal(result.summary.bpm, Math.min(...result.summary.tempoAlternatives));
+    assert.ok(result.diagnostics.some((item) => item.code === 'BROWSER_AUTO_TEMPO_HALF_DOUBLE_PROVISIONAL'));
+  }
+});
+
+test('S12 low-value browser candidates are removed only from the derived cleanup view', () => {
+  const result = buildBrowserMusicXmlFromBasicPitch({
+    noteEvents: [
+      { startTimeSeconds: 0, durationSeconds: 0.5, pitchMidi: 60, amplitude: 0.8 },
+      { startTimeSeconds: 0.5, durationSeconds: 0.03, pitchMidi: 72, amplitude: 0.8 },
+      { startTimeSeconds: 1.0, durationSeconds: 0.5, pitchMidi: 64, amplitude: 0.8 },
+    ],
+    bpm: 120,
+    meterNumerator: 4,
+    meterDenominator: 4,
+  });
+
+  assert.equal(result.summary.detectedEventCount, 3);
+  assert.equal(result.summary.retainedEventCount, 2);
+  assert.equal(result.transcription.rawEvents.length, 3);
+  assert.equal(result.guitarCleanup.suppressedEventCount, 1);
+  assert.ok(result.diagnostics.some((item) => item.code === 'GUITAR_CLEANUP_CANDIDATES_SUPPRESSED'));
+});
+
+test('S12 repeated notation warnings are grouped deterministically', () => {
+  const result = buildBrowserMusicXmlFromBasicPitch({
+    noteEvents: [
+      { startTimeSeconds: 0, durationSeconds: 0.25, pitchMidi: 60, amplitude: 0.8 },
+      { startTimeSeconds: 0, durationSeconds: 0.5, pitchMidi: 64, amplitude: 0.8 },
+      { startTimeSeconds: 1, durationSeconds: 0.25, pitchMidi: 62, amplitude: 0.8 },
+      { startTimeSeconds: 1, durationSeconds: 0.5, pitchMidi: 65, amplitude: 0.8 },
+    ],
+    bpm: 120,
+    meterNumerator: 4,
+    meterDenominator: 4,
+    allowTriplets: false,
+  });
+
+  const grouped = result.diagnostics.find((item) => item.code === 'MIXED_DURATION_CHORD_SPLIT_HINT_PRESERVED');
+  assert.ok(grouped);
+  assert.equal(grouped.details.groupedCount, 2);
+  assert.match(grouped.message, /2 occurrences/);
 });
