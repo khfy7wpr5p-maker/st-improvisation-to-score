@@ -21,19 +21,19 @@ Bounded MusicXML projection plus public Score Editor SDK `1.0.0` bridge; standal
 ## S03B — Editor Runtime Conformance — COMPLETE
 Pinned real `st-score-editor-core` runtime builds and accepts/exports the generated polyphonic MusicXML through the public SDK boundary.
 
-## S04A — Tempo Candidate Analysis — CURRENT
+## S04A — Tempo Candidate Analysis — COMPLETE
+Bounded onset-derived BPM hypotheses, chord-jitter attack grouping, confidence and explicit half/double ambiguity. Candidate authority remains non-canonical.
 
-- collapse near-simultaneous note attacks before timing analysis;
-- generate bounded BPM hypotheses from inter-attack intervals;
-- rank candidates against admitted rhythm grids;
-- preserve half/double ambiguity explicitly;
-- return user/teacher guidance for weak evidence instead of rejection;
-- keep candidate authority non-canonical.
+## S04B — Beat / Tempo Provider — CURRENT
 
-## S04B — Beat / Tempo Provider
-Adapter for stronger audio beat evidence, beat phase and provider confidence. Admit automatic BPM only when independent beat evidence clears bounded consistency gates.
+- validate provider beat timelines and bounded tempo candidates;
+- recompute BPM independently from median beat period;
+- gate automatic BPM on beat count, provider confidence, beat-spacing consistency and BPM-period agreement;
+- reject near-equal half/double candidates from automatic admission;
+- keep user-supplied BPM above provider evidence;
+- degrade failed gates to `TEMPO_GUIDANCE_REQUIRED`, not hard blocking.
 
-## S04C — Meter Candidates
+## S04C — Meter Candidates — NEXT
 Meter/accent candidates and initial TempoMap/MeterMap projection; ambiguous meter stays provisional.
 
 ## S05 — Rubato / Expressive Time

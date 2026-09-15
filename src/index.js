@@ -27,6 +27,15 @@ export {
 } from './adapters/basicPitch.js';
 
 export {
+  BEAT_TEMPO_ADAPTER_VERSION,
+  BEAT_TEMPO_MAX_BEATS,
+  BEAT_TEMPO_MAX_CANDIDATES,
+  BEAT_TEMPO_SOURCE_AUTHORITY,
+  adaptBeatTempoProviderResult,
+  buildScoreDraftFromBeatTempoProvider,
+} from './adapters/beatTempo.js';
+
+export {
   SCORE_EDITOR_SDK_BRIDGE_VERSION,
   SCORE_EDITOR_SDK_REQUIRED_VERSION,
   exportMusicXmlFromEditor,
