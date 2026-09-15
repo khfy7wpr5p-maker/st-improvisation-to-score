@@ -7,13 +7,13 @@ import {
   serializeScoreDraftToMusicXml,
 } from '../src/index.js';
 
-const engineEntry = process.argv[2];
-if (!engineEntry) throw new Error('Guitar TAB engine entry path is required.');
+const runtimeEntry = process.argv[2];
+if (!runtimeEntry) throw new Error('Guitar TAB application runtime entry path is required.');
 
-const engineModule = await import(pathToFileURL(resolve(engineEntry)).href);
-const engine = engineModule.default ?? engineModule;
-if (typeof engine.convertMusicXmlToCanonicalTab !== 'function') {
-  throw new Error('Pinned Guitar TAB engine does not expose convertMusicXmlToCanonicalTab().');
+const runtimeModule = await import(pathToFileURL(resolve(runtimeEntry)).href);
+const runtime = runtimeModule.default ?? runtimeModule;
+if (typeof runtime.processMusicXmlUpload !== 'function') {
+  throw new Error('Pinned Guitar TAB application runtime does not expose processMusicXmlUpload().');
 }
 
 const context = {
@@ -25,30 +25,36 @@ const context = {
 };
 
 const draft = buildScoreDraft([
-  { eventId: 'g1', midiPitch: 64, onsetSeconds: 0, offsetSeconds: 0.5 },
-  { eventId: 'g2', midiPitch: 67, onsetSeconds: 0.5, offsetSeconds: 1.0 },
-  { eventId: 'g3', midiPitch: 71, onsetSeconds: 1.0, offsetSeconds: 1.5 },
+  { eventId: 'bass', midiPitch: 48, onsetSeconds: 0, offsetSeconds: 2.0 },
+  { eventId: 'upper-1', midiPitch: 64, onsetSeconds: 0.5, offsetSeconds: 0.75 },
+  { eventId: 'upper-2', midiPitch: 65, onsetSeconds: 0.75, offsetSeconds: 1.0 },
 ], context);
 if (draft.status !== 'PASS') throw new Error(`Expected PASS source draft, got ${draft.status}.`);
+if (draft.polyphonicProjection.voiceCount < 2) throw new Error('S07 runtime fixture must exercise polyphonic routing.');
 
 const sourceMusicXml = serializeScoreDraftToMusicXml(draft, { partName: 'Improvisation' });
-const result = handoffMusicXmlToOptionalGuitarTab(engine, sourceMusicXml);
-if (!result.ok) throw new Error(`Optional TAB handoff failed: ${result.code}: ${result.message}`);
+const result = handoffMusicXmlToOptionalGuitarTab(runtime, sourceMusicXml);
+if (!result.ok) {
+  throw new Error(`Optional TAB handoff failed: ${result.code}: ${result.message}; preflight=${JSON.stringify(result.preflight)}`);
+}
 if (result.source.musicXml !== sourceMusicXml || result.source.preserved !== true) {
   throw new Error('S07 did not preserve the source MusicXML artifact.');
 }
-if (!result.canonicalTabResult || result.canonicalTabResult.noteCount !== 3) {
-  throw new Error(`Expected 3 TAB notes, got ${result.canonicalTabResult?.noteCount ?? 'none'}.`);
+if (!result.capabilities || result.capabilities.generateTab !== true) {
+  throw new Error('Pinned TAB runtime did not expose generateTab capability.');
 }
-const noteEvents = result.canonicalTabResult.measures.flatMap((measure) => measure.events).filter((event) => event.type !== 'rest');
-if (noteEvents.some((event) => !event.selectedPosition || !Number.isInteger(event.selectedPosition.string) || !Number.isInteger(event.selectedPosition.fret))) {
-  throw new Error('Pinned TAB engine did not assign concrete string/fret positions.');
+if (!result.canonicalTabResult || !Array.isArray(result.canonicalTabResult.noteDispositions)) {
+  throw new Error('Pinned TAB runtime did not produce canonical v2 note dispositions.');
 }
-if (typeof result.artifacts.ascii !== 'string' || result.artifacts.ascii.length === 0) {
-  throw new Error('ASCII TAB artifact was not produced.');
+const retained = result.canonicalTabResult.noteDispositions.filter((entry) => entry.disposition === 'KEEP');
+if (retained.length === 0 || retained.some((entry) => !entry.selectedPosition)) {
+  throw new Error('Pinned TAB runtime did not assign concrete positions to retained notes.');
 }
 if (typeof result.artifacts.musicXml !== 'string' || !result.artifacts.musicXml.includes('<score-partwise')) {
   throw new Error('TAB MusicXML artifact was not produced.');
+}
+if (typeof result.artifacts.json !== 'string' || result.artifacts.json.length === 0) {
+  throw new Error('TAB JSON evidence artifact was not produced.');
 }
 
 const unavailable = handoffMusicXmlToOptionalGuitarTab(null, sourceMusicXml);
@@ -59,15 +65,20 @@ if (unavailable.ok || unavailable.source.musicXml !== sourceMusicXml || unavaila
 process.stdout.write(`${JSON.stringify({
   status: 'PASS',
   sourceDraftStatus: draft.status,
+  sourceVoiceCount: draft.polyphonicProjection.voiceCount,
   tabStatus: result.status,
+  runtimeRoute: result.canonicalTabResult?.source?.documentType ?? null,
   preflightStatus: result.preflight?.status ?? null,
+  generateTab: result.capabilities.generateTab,
+  exportTab: result.capabilities.export,
+  provisionalTabAvailable: result.status === 'TAB_REVIEW_REQUIRED',
   sourceMusicXmlBytes: Buffer.byteLength(sourceMusicXml),
-  tabNoteCount: result.canonicalTabResult.noteCount,
-  assignedPositions: noteEvents.map((event) => ({
-    string: event.selectedPosition.string,
-    fret: event.selectedPosition.fret,
+  noteDispositionCount: result.canonicalTabResult.noteDispositions.length,
+  retainedPositions: retained.map((entry) => ({
+    sourceEventId: entry.sourceEventId,
+    string: entry.selectedPosition.string,
+    fret: entry.selectedPosition.fret,
   })),
-  asciiBytes: Buffer.byteLength(result.artifacts.ascii),
   tabMusicXmlBytes: Buffer.byteLength(result.artifacts.musicXml),
   sourcePreservedWhenEngineMissing: unavailable.source.preserved,
 }, null, 2)}\n`);
