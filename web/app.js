@@ -6,6 +6,10 @@ import {
 } from 'https://esm.sh/@spotify/basic-pitch@1.0.1';
 
 import { buildBrowserMusicXmlFromBasicPitch } from '../src/index.js';
+import {
+  BASIC_PITCH_AUDIO_SAMPLE_RATE,
+  prepareAudioForBasicPitch,
+} from './audioPrepare.js';
 
 const MODEL_URL = 'https://unpkg.com/@spotify/basic-pitch@1.0.1/model/model.json';
 
@@ -215,10 +219,21 @@ async function convert() {
   try {
     setProgress(3, 'Dosya okunuyor', 'Ses verisi ve kaynak özeti hazırlanıyor.');
     const fileBuffer = await selectedFile.arrayBuffer();
-    const [audioSha256, audioBuffer] = await Promise.all([
+    const [audioSha256, decodedAudioBuffer] = await Promise.all([
       sha256Hex(fileBuffer),
       decodeAudio(fileBuffer),
     ]);
+
+    const needsNormalization = decodedAudioBuffer.sampleRate !== BASIC_PITCH_AUDIO_SAMPLE_RATE
+      || decodedAudioBuffer.numberOfChannels !== 1;
+    if (needsNormalization) {
+      setProgress(
+        8,
+        'Ses Basic Pitch için hazırlanıyor',
+        `${decodedAudioBuffer.sampleRate} Hz / ${decodedAudioBuffer.numberOfChannels} kanal → ${BASIC_PITCH_AUDIO_SAMPLE_RATE} Hz mono`,
+      );
+    }
+    const audioBuffer = await prepareAudioForBasicPitch(decodedAudioBuffer, { scope: window });
 
     const noteEvents = await transcribe(audioBuffer);
     if (noteEvents.length === 0) throw new Error('Basic Pitch bu kayıtta kullanılabilir nota olayı bulamadı.');
