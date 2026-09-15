@@ -32,7 +32,7 @@ MIDI remains optional diagnostic/export data. It is not the canonical bridge fro
 - **S03A/S03B Score Editor Bridge — complete:** public SDK MusicXML open/export plus real pinned runtime conformance.
 - **S04A–S05D Timing — complete:** tempo/meter candidates, provider admission, piecewise timing, local tempo and changing-meter/pickup projection.
 - **S06A–S06E Teacher Workflow — complete:** append-only teacher ledger, calibration, reversible overlay, public authoring receipts and durable source identity through Score Editor edits.
-- **S07 Optional Guitar TAB — current:** reviewed MusicXML -> optional pinned Guitar TAB engine; TAB failure remains local and source notation stays usable.
+- **S07 Optional Guitar TAB — current:** reviewed MusicXML -> optional pinned Guitar TAB capability; TAB failure remains local and source notation stays usable.
 
 ## Product policy
 
@@ -69,7 +69,7 @@ The host injects a compatible SDK `1.0.0` object. This repository does not impor
 
 ## Guitar TAB boundary
 
-S07 consumes the package-root contract of `musicxml-to-guitar-tab-engine` through host injection. The tested runtime is pinned in CI. Missing/blocked/failed TAB conversion returns `TAB_UNAVAILABLE` while preserving the source MusicXML.
+S07 accepts a host-injected Guitar TAB capability. It prefers the pinned engine's capability-driven `processMusicXmlUpload(...)` application runtime so `PASS`, `REVIEW_REQUIRED`, provisional TAB and local capability degradation remain intact. A legacy package-root converter is retained only as a fallback for compatible simple scores. The general score serializer is not narrowed to satisfy that older parser. Missing/blocked/failed TAB conversion returns `TAB_UNAVAILABLE` while preserving the source MusicXML.
 
 ## Development
 
