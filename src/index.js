@@ -171,6 +171,12 @@ export {
 } from './teacher/calibrationMetrics.js';
 
 export {
+  TEACHER_ACCEPTANCE_CORE_CATEGORIES,
+  TEACHER_ACCEPTANCE_REPORT_VERSION,
+  buildTeacherAcceptanceReport,
+} from './teacher/acceptanceReport.js';
+
+export {
   TEACHER_SCORE_OVERLAY_AUTHORITY,
   TEACHER_SCORE_OVERLAY_MAX_APPLIED,
   TEACHER_SCORE_OVERLAY_VERSION,
