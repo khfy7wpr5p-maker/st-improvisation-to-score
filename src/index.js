@@ -48,6 +48,15 @@ export {
 } from './adapters/scoreEditorSdk.js';
 
 export {
+  SCORE_EDITOR_SOURCE_IDENTITY_BRIDGE_VERSION,
+  SCORE_EDITOR_SOURCE_NOTE_PREFIX,
+  createScoreEditorSourceIdentityManifest,
+  openScoreDraftWithSourceIdentityInEditor,
+  resolveScoreEditorSourceIdentity,
+  serializeScoreDraftForScoreEditor,
+} from './adapters/scoreEditorSourceIdentity.js';
+
+export {
   SCORE_EDITOR_TEACHER_EDIT_BRIDGE_VERSION,
   SCORE_EDITOR_TEACHER_EDIT_SDK_VERSION,
   appendScoreEditorTeacherEdit,
