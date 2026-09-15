@@ -1,24 +1,24 @@
 # Roadmap
 
-## S00 — Foundation — CURRENT
+## S00 — Foundation — COMPLETE
 
-Exit criteria:
-
-- repository-owned contracts exist;
-- known-BPM/meter rhythm quantization is deterministic;
-- chord grouping and monophonic rest materialization work;
+- repository-owned contracts;
+- known-BPM/meter rhythm quantization;
+- chord grouping and monophonic rest materialization;
 - unresolved overlaps become review diagnostics;
-- Node 20/22 CI passes.
+- Node 20/22 CI coverage.
 
-## S01 — Basic Pitch Adapter
+## S01 — Basic Pitch Adapter — IMPLEMENTED
 
-- consume the existing `st-omr-correction-engine` Basic Pitch provider output;
-- preserve source audio hash/provider/model/config provenance;
-- map pitch/onset/offset/confidence into `RawPerformanceEvent`;
+- consume the verified `st-omr-correction-engine` Basic Pitch provider result contract;
+- preserve source audio hash/provider/model provenance;
+- map pitch/onset/offset/amplitude into `RawPerformanceEvent`;
+- do not invent note confidence;
 - keep generated MIDI optional and non-authoritative;
-- fixture-driven contract tests before real provider runtime.
+- compose provider result directly into known-tempo `ScoreDraft`;
+- fixture-driven adapter tests and contract-drift checks.
 
-## S02 — Polyphonic Reconstruction
+## S02 — Polyphonic Reconstruction — NEXT
 
 - introduce sonority-span adapter based on `guitar-polyphony-lab-` semantics;
 - bounded voice candidates;

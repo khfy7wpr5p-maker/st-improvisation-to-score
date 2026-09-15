@@ -1,6 +1,6 @@
 {
   "name": "st-improvisation-to-score",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": false,
   "type": "module",
   "engines": {
@@ -8,6 +8,6 @@
   },
   "scripts": {
     "test": "node --test",
-    "check": "node --check src/contracts.js && node --check src/rhythmQuantizer.js && node --check src/scoreDraft.js && node --check src/index.js"
+    "check": "node --check src/contracts.js && node --check src/rhythmQuantizer.js && node --check src/scoreDraft.js && node --check src/adapters/basicPitch.js && node --check src/index.js"
   }
 }
