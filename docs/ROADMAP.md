@@ -8,29 +8,35 @@
 - unresolved overlaps become review diagnostics;
 - Node 20/22 CI coverage.
 
-## S01 — Basic Pitch Adapter — IMPLEMENTED
+## S01 — Basic Pitch Adapter — COMPLETE
 
-- consume the verified `st-omr-correction-engine` Basic Pitch provider result contract;
-- preserve source audio hash/provider/model provenance;
-- map pitch/onset/offset/amplitude into `RawPerformanceEvent`;
-- do not invent note confidence;
-- keep generated MIDI optional and non-authoritative;
-- compose provider result directly into known-tempo `ScoreDraft`;
-- fixture-driven adapter tests and contract-drift checks.
+- verified `st-omr-correction-engine` Basic Pitch result contract;
+- source audio/provider/model provenance;
+- pitch/onset/offset/amplitude -> `RawPerformanceEvent`;
+- no invented note confidence;
+- generated MIDI remains optional/non-authoritative;
+- direct provider-result -> known-tempo `ScoreDraft` composition.
 
-## S02 — Polyphonic Reconstruction — NEXT
+## S02A — Sonority Foundation — IMPLEMENTED
 
-- introduce sonority-span adapter based on `guitar-polyphony-lab-` semantics;
-- bounded voice candidates;
-- same-onset chord grouping;
-- sustained bass/upper-voice separation;
-- no arbitrary voice winner when candidate costs are near-equal.
+- rational half-open note intervals;
+- deterministic boundary-to-boundary sonority spans;
+- active/attack/sustained event identities;
+- `MONOPHONIC`, `CHORD_ATTACK`, `SUSTAINED_OVERLAP`, `SUSTAINED_SONORITY` classifications;
+- ScoreDraft exposes sonority evidence without assigning voices.
+
+## S02B — Bounded Voice Candidates — NEXT
+
+- derive candidate voices from sustained-note continuity, register and attack evidence;
+- score candidates deterministically;
+- abstain when top candidates are near-equal;
+- never invent a voice to make a measure sum correctly.
 
 ## S03 — ST Score Editor Bridge
 
 - integrate only through `st-score-editor-core` public SDK;
 - map ScoreDraft into admitted score/editing surface;
-- preserve generated confidence/diagnostics as review metadata;
+- preserve generated diagnostics as review metadata;
 - teacher correction and exact undo remain editor authority;
 - export admitted MusicXML.
 

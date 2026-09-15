@@ -25,3 +25,9 @@ export {
   adaptBasicPitchProviderResult,
   buildScoreDraftFromBasicPitchResult,
 } from './adapters/basicPitch.js';
+
+export {
+  SONORITY_ANALYZER_VERSION,
+  SONORITY_MAX_EVENTS,
+  analyzeSonoritySpans,
+} from './polyphony/sonority.js';

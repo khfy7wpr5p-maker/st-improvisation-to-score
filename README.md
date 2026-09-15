@@ -11,6 +11,7 @@ MP3/WAV/M4A/FLAC/OGG
         -> RawPerformanceEvent[]
         -> musical-time mapping
         -> rhythm quantization
+        -> sonority analysis
         -> measure/rest/chord reconstruction
         -> ScoreDraft
         -> ST Score Editor (planned)
@@ -21,10 +22,11 @@ MIDI is an optional diagnostic/export artifact, not the canonical bridge between
 
 ## Current development surface
 
-- **S00 Foundation — complete:** repository-owned event/context contracts, rational notation timing, known-BPM/meter quantizer, chord grouping, explicit rests, review diagnostics and CI.
-- **S01 Basic Pitch Adapter — implemented:** maps the verified `st-omr-correction-engine` Basic Pitch provider result into repository-owned raw events while preserving audio/model provenance and source authority.
+- **S00 Foundation — complete:** repository-owned contracts, rational notation timing, known-BPM/meter quantizer, chord grouping, explicit rests and CI.
+- **S01 Basic Pitch Adapter — complete:** verified Basic Pitch provider result -> repository-owned raw events with preserved audio/model provenance.
+- **S02A Sonority Foundation — implemented:** exact rational half-open note intervals and deterministic `MONOPHONIC` / `CHORD_ATTACK` / `SUSTAINED_OVERLAP` sonority spans.
 
-The S01 adapter deliberately does not copy generated MIDI bytes into canonical transcription state. It preserves only generated-MIDI SHA-256 provenance; score drafting consumes Basic Pitch note events directly.
+The system still does not silently assign polyphonic voices. Sustained overlap remains review evidence until the bounded voice-candidate stage.
 
 ## Safety / authority rules
 
@@ -40,7 +42,7 @@ The S01 adapter deliberately does not copy generated MIDI bytes into canonical t
 
 - `st-omr-correction-engine`: Basic Pitch audio -> note-event provider;
 - `st-music-workstation`: Musical Time / TempoMap / MeterMap semantics;
-- `guitar-polyphony-lab-`: polyphonic timeline / sonority concepts;
+- `guitar-polyphony-lab-`: half-open interval / sonority-span semantics;
 - `st-score-editor-core`: future public-SDK teacher review and MusicXML projection;
 - `musicxml-to-guitar-tab-engine`: optional downstream MusicXML -> Guitar TAB.
 
@@ -51,8 +53,4 @@ npm test
 npm run check
 ```
 
-See:
-
-- `docs/ARCHITECTURE.md`
-- `docs/ROADMAP.md`
-- `docs/S01_BASIC_PITCH_ADAPTER.md`
+See `docs/ARCHITECTURE.md`, `docs/ROADMAP.md`, `docs/S01_BASIC_PITCH_ADAPTER.md`, and `docs/S02A_SONORITY_FOUNDATION.md`.

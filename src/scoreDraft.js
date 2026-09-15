@@ -5,6 +5,7 @@ import {
   rational,
   rationalToNumber,
 } from './contracts.js';
+import { analyzeSonoritySpans } from './polyphony/sonority.js';
 import { quantizePerformance } from './rhythmQuantizer.js';
 
 function subtract(a, b) {
@@ -121,6 +122,7 @@ function buildMeasure(index, events, measureLength) {
 export function buildScoreDraft(rawEvents, contextInput) {
   const context = createTranscriptionContext(contextInput);
   const quantized = quantizePerformance(rawEvents, context);
+  const polyphony = analyzeSonoritySpans(quantized);
   const measureLength = measureLengthQuarter(context);
   const measureLengthNumber = rationalToNumber(measureLength);
   if (measureLengthNumber <= 0) throw new ImprovisationToScoreError('INVALID_MEASURE_LENGTH', 'Derived measure length must be positive.');
@@ -139,11 +141,12 @@ export function buildScoreDraft(rawEvents, contextInput) {
   }
 
   return Object.freeze({
-    schemaVersion: 'score-draft-v0.1',
+    schemaVersion: 'score-draft-v0.2',
     status: diagnostics.length === 0 ? 'PASS' : 'REVIEW_REQUIRED',
     context,
     measureLengthQuarter: measureLength,
     quantizedEvents: quantized,
+    polyphony,
     measures: Object.freeze(measures),
     diagnostics: Object.freeze(diagnostics),
   });
