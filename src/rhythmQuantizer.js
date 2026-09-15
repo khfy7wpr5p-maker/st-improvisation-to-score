@@ -58,17 +58,21 @@ function quantizeValue(rawQuarter, context, { allowZero }) {
     addCandidate(candidates, value);
   }
   if (context.allowTriplets) {
-    // Stage 00 admits eighth-note-triplet spacing: 1/3 quarter note.
     for (const value of nearbyMultiples(rawQuarter, 1, 3, { allowZero })) addCandidate(candidates, value);
   }
   return chooseClosest(rawQuarter, [...candidates.values()]);
 }
 
-export function quantizePerformanceEvent(rawInput, contextInput) {
-  const raw = createRawPerformanceEvent(rawInput);
-  const context = createTranscriptionContext(contextInput);
-  const rawOnsetQuarter = secondsToQuarterNotes(raw.onsetSeconds, context.bpm);
-  const rawDurationQuarter = secondsToQuarterNotes(raw.offsetSeconds - raw.onsetSeconds, context.bpm);
+function validateRawQuarter(value, field, { allowZero }) {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value < 0 || (!allowZero && value <= 0)) {
+    throw new ImprovisationToScoreError('INVALID_RAW_QUARTER_VALUE', `${field} must be finite and ${allowZero ? '>= 0' : '> 0'}.`, { field, value });
+  }
+  return value;
+}
+
+function quantizeNormalizedEvent(raw, context, rawOnsetQuarterInput, rawDurationQuarterInput) {
+  const rawOnsetQuarter = validateRawQuarter(rawOnsetQuarterInput, 'rawOnsetQuarter', { allowZero: true });
+  const rawDurationQuarter = validateRawQuarter(rawDurationQuarterInput, 'rawDurationQuarter', { allowZero: false });
   const onsetQuarter = quantizeValue(rawOnsetQuarter, context, { allowZero: true });
   const durationQuarter = quantizeValue(rawDurationQuarter, context, { allowZero: false });
   const snappedOnset = rationalToNumber(onsetQuarter);
@@ -93,21 +97,45 @@ export function quantizePerformanceEvent(rawInput, contextInput) {
   });
 }
 
-export function quantizePerformance(rawEvents, contextInput) {
-  if (!Array.isArray(rawEvents)) throw new ImprovisationToScoreError('INVALID_EVENT_LIST', 'rawEvents must be an array.');
+export function quantizePerformanceEventFromQuarterValues(rawInput, contextInput, rawOnsetQuarter, rawDurationQuarter) {
+  const raw = createRawPerformanceEvent(rawInput);
   const context = createTranscriptionContext(contextInput);
+  return quantizeNormalizedEvent(raw, context, rawOnsetQuarter, rawDurationQuarter);
+}
+
+export function quantizePerformanceEvent(rawInput, contextInput) {
+  const raw = createRawPerformanceEvent(rawInput);
+  const context = createTranscriptionContext(contextInput);
+  return quantizeNormalizedEvent(
+    raw,
+    context,
+    secondsToQuarterNotes(raw.onsetSeconds, context.bpm),
+    secondsToQuarterNotes(raw.offsetSeconds - raw.onsetSeconds, context.bpm),
+  );
+}
+
+function sortAndFreezeQuantized(quantized) {
   const ids = new Set();
-  const quantized = rawEvents.map((event) => {
-    const result = quantizePerformanceEvent(event, context);
+  for (const result of quantized) {
     if (ids.has(result.eventId)) {
       throw new ImprovisationToScoreError('DUPLICATE_EVENT_ID', 'eventId values must be unique.', { eventId: result.eventId });
     }
     ids.add(result.eventId);
-    return result;
-  });
+  }
   return Object.freeze(quantized.sort((a, b) =>
     rationalToNumber(a.onsetQuarter) - rationalToNumber(b.onsetQuarter) ||
     a.midiPitch - b.midiPitch ||
     a.eventId.localeCompare(b.eventId)
   ));
+}
+
+export function quantizePerformance(rawEvents, contextInput) {
+  if (!Array.isArray(rawEvents)) throw new ImprovisationToScoreError('INVALID_EVENT_LIST', 'rawEvents must be an array.');
+  const context = createTranscriptionContext(contextInput);
+  return sortAndFreezeQuantized(rawEvents.map((event) => quantizePerformanceEvent(event, context)));
+}
+
+export function finalizeQuantizedPerformance(quantizedEvents) {
+  if (!Array.isArray(quantizedEvents)) throw new ImprovisationToScoreError('INVALID_EVENT_LIST', 'quantizedEvents must be an array.');
+  return sortAndFreezeQuantized([...quantizedEvents]);
 }

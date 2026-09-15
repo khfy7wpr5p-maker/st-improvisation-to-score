@@ -2,9 +2,10 @@ import {
   ImprovisationToScoreError,
   createTranscriptionContext,
   rational,
+  rationalToNumber,
 } from '../contracts.js';
 
-export const TIMING_MAP_VERSION = '0.1.0';
+export const TIMING_MAP_VERSION = '0.2.0';
 export const TIMING_MAP_AUTHORITY = 'PROVISIONAL_TIMING_MAP';
 export const TIMING_MAP_MAX_CHANGES = 10_000;
 
@@ -91,7 +92,6 @@ function validateOrderedOrigin(changes, field) {
 
 function normalizeMap(input) {
   if (input === null || typeof input !== 'object' || Array.isArray(input)) fail('INVALID_TIMING_MAP', 'Timing map must be an object.');
-  if (input.schemaVersion === 'timing-map-v0.1' && input.authority === TIMING_MAP_AUTHORITY && Array.isArray(input.tempoChanges) && Array.isArray(input.meterChanges)) return input;
   return createTimingMap(input);
 }
 
@@ -102,6 +102,20 @@ function effectiveChange(changes, positionQuarter) {
     current = changes[index];
   }
   return current;
+}
+
+function tempoBoundarySeconds(tempoChanges) {
+  const boundaries = [0];
+  let elapsed = 0;
+  for (let index = 1; index < tempoChanges.length; index += 1) {
+    const previous = tempoChanges[index - 1];
+    const current = tempoChanges[index];
+    const quarterDistance = rationalToNumber(current.positionQuarter) - rationalToNumber(previous.positionQuarter);
+    elapsed += quarterDistance * 60 / previous.bpm;
+    if (!Number.isFinite(elapsed) || elapsed < 0) fail('TIMING_MAP_ELAPSED_OVERFLOW', 'Tempo map elapsed-time accumulation is not finite.', { index });
+    boundaries.push(elapsed);
+  }
+  return boundaries;
 }
 
 export function createTimingMap(input) {
@@ -148,4 +162,41 @@ export function effectiveMeterAtQuarter(timingMapInput, positionInput) {
   const timingMap = normalizeMap(timingMapInput);
   const positionQuarter = normalizePosition(positionInput, 'positionQuarter');
   return effectiveChange(timingMap.meterChanges, positionQuarter);
+}
+
+export function quarterPositionToElapsedSeconds(timingMapInput, positionInput) {
+  const timingMap = normalizeMap(timingMapInput);
+  const positionQuarter = normalizePosition(positionInput, 'positionQuarter');
+  const targetQuarter = rationalToNumber(positionQuarter);
+  const boundaries = tempoBoundarySeconds(timingMap.tempoChanges);
+  let segmentIndex = 0;
+  for (let index = 1; index < timingMap.tempoChanges.length; index += 1) {
+    if (compare(timingMap.tempoChanges[index].positionQuarter, positionQuarter) > 0) break;
+    segmentIndex = index;
+  }
+  const segment = timingMap.tempoChanges[segmentIndex];
+  const localQuarter = targetQuarter - rationalToNumber(segment.positionQuarter);
+  const elapsed = boundaries[segmentIndex] + localQuarter * 60 / segment.bpm;
+  if (!Number.isFinite(elapsed) || elapsed < 0) fail('TIMING_MAP_ELAPSED_OVERFLOW', 'Mapped elapsed seconds are not finite.');
+  return elapsed;
+}
+
+export function elapsedSecondsToQuarterPosition(timingMapInput, seconds) {
+  const timingMap = normalizeMap(timingMapInput);
+  if (typeof seconds !== 'number' || !Number.isFinite(seconds) || seconds < 0) {
+    fail('INVALID_SECONDS', 'seconds must be finite and >= 0.', { seconds });
+  }
+  const boundaries = tempoBoundarySeconds(timingMap.tempoChanges);
+  let segmentIndex = timingMap.tempoChanges.length - 1;
+  for (let index = 0; index < timingMap.tempoChanges.length - 1; index += 1) {
+    if (seconds < boundaries[index + 1]) {
+      segmentIndex = index;
+      break;
+    }
+  }
+  const segment = timingMap.tempoChanges[segmentIndex];
+  const localSeconds = seconds - boundaries[segmentIndex];
+  const quarter = rationalToNumber(segment.positionQuarter) + localSeconds * segment.bpm / 60;
+  if (!Number.isFinite(quarter) || quarter < 0) fail('TIMING_MAP_POSITION_OVERFLOW', 'Mapped musical position is not finite.');
+  return quarter;
 }

@@ -22,29 +22,32 @@ Bounded MusicXML projection plus public Score Editor SDK `1.0.0` bridge; standal
 Pinned real `st-score-editor-core` runtime builds and accepts/exports the generated polyphonic MusicXML through the public SDK boundary.
 
 ## S04A — Tempo Candidate Analysis — COMPLETE
-Bounded onset-derived BPM hypotheses, chord-jitter attack grouping, confidence and explicit half/double ambiguity. Candidate authority remains non-canonical.
+Bounded onset-derived BPM hypotheses, chord-jitter attack grouping, confidence and explicit half/double ambiguity.
 
 ## S04B — Beat / Tempo Provider — COMPLETE
 Validated beat-provider evidence, independent beat-period BPM check, consistency/confidence gates and user-BPM precedence.
 
 ## S04C — Meter Candidates — COMPLETE
-Bounded beat-accent cycle ranking, downbeat phase hints and explicit denominator non-inference. Meter output remains non-canonical.
+Bounded beat-accent cycle ranking, downbeat phase hints and explicit denominator non-inference.
 
-## S05A — Timing Map Foundation — CURRENT
+## S05A — Timing Map Foundation — COMPLETE
+Repository-owned provisional tempo/meter change maps with strict ordering, origin invariants and source authority metadata.
 
-- repository-owned provisional timing-map contract;
-- separate ordered tempo and meter change sequences keyed by rational quarter position;
-- origin-at-zero and strict-ordering invariants;
-- per-change source authority;
-- constant current context represented as one timing segment;
-- user BPM and admitted provider BPM retain distinct timing-map provenance;
-- no implicit sorting, repair or inferred extra changes.
+## S05B — Piecewise Tempo Mapping — CURRENT
 
-## S05B — Piecewise Tempo Mapping — NEXT
-Map source seconds through multiple tempo segments and quantize against local musical time without changing pitch-event identity.
+- integrate ordered tempo segments into elapsed-seconds conversion;
+- provide exact boundary-aware quarter -> seconds and seconds -> quarter mapping;
+- map note onset and offset independently across tempo changes;
+- quantize mapped performance without changing pitch-event identity;
+- allow ScoreDraft to consume multiple tempo segments;
+- require timing-map origin to agree with transcription context;
+- fail explicitly on changing-meter ScoreDraft projection until the measure builder supports it.
 
-## S05C — Rubato / Expressive Time
-Infer bounded local tempo segments from stronger beat evidence; phrase-aware quantization and pickup inference remain provisional.
+## S05C — Local Tempo Segment Evidence — NEXT
+Generate bounded local tempo-segment proposals from stronger beat evidence, with continuity and stability gates. Do not infer expressive timing from note events alone when beat evidence is insufficient.
+
+## S05D — Changing Meter / Pickup Projection
+Materialize meter changes and pickup structure into variable measure boundaries without discarding the provisional timing map.
 
 ## S06 — Teacher Calibration
 Versioned teacher corrections, separate pitch/onset/duration/rhythm/voice metrics and calibrated confidence.

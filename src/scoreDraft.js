@@ -8,8 +8,11 @@ import {
 import { materializePolyphonicScore } from './polyphony/materialize.js';
 import { analyzeSonoritySpans } from './polyphony/sonority.js';
 import { analyzeVoiceCandidates } from './polyphony/voiceCandidates.js';
-import { quantizePerformance } from './rhythmQuantizer.js';
-import { createConstantTimingMapFromContext } from './timing/timingMap.js';
+import {
+  createConstantTimingMapFromContext,
+  createTimingMap,
+} from './timing/timingMap.js';
+import { quantizePerformanceWithTimingMap } from './timing/timingMapQuantizer.js';
 
 function subtract(a, b) {
   return rational(a.numerator * b.denominator - b.numerator * a.denominator, a.denominator * b.denominator);
@@ -159,8 +162,19 @@ export function buildScoreDraft(rawEvents, contextInput, options = {}) {
     throw new ImprovisationToScoreError('INVALID_SCORE_DRAFT_OPTIONS', 'Score draft options must be a plain object.');
   }
   const context = createTranscriptionContext(contextInput);
-  const timingMap = createConstantTimingMapFromContext(context, options.timingMapMetadata ?? {});
-  const quantized = quantizePerformance(rawEvents, context);
+  const timingMap = options.timingMap === undefined
+    ? createConstantTimingMapFromContext(context, options.timingMapMetadata ?? {})
+    : createTimingMap(options.timingMap);
+
+  if (timingMap.meterChanges.length !== 1) {
+    throw new ImprovisationToScoreError(
+      'CHANGING_METER_SCORE_PROJECTION_NOT_YET_ADMITTED',
+      'ScoreDraft measure projection currently admits one meter segment; the timing map itself remains valid for later changing-meter projection.',
+      { meterChangeCount: timingMap.meterChanges.length },
+    );
+  }
+
+  const quantized = quantizePerformanceWithTimingMap(rawEvents, context, timingMap);
   const polyphony = analyzeSonoritySpans(quantized);
   const voiceCandidates = analyzeVoiceCandidates(quantized);
   const polyphonicProjection = materializePolyphonicScore(quantized, voiceCandidates, context);
@@ -179,7 +193,7 @@ export function buildScoreDraft(rawEvents, contextInput, options = {}) {
   }
 
   return Object.freeze({
-    schemaVersion: 'score-draft-v0.5',
+    schemaVersion: 'score-draft-v0.6',
     status: 'PASS',
     polyphonyPolicy: 'POLYPHONY_IS_DEFAULT',
     context,
