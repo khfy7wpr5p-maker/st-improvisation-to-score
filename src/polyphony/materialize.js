@@ -3,8 +3,10 @@ import {
   measureLengthQuarter,
   rational,
 } from '../contracts.js';
+import { buildMeasureTopology } from '../timing/measureTopology.js';
+import { createConstantTimingMapFromContext } from '../timing/timingMap.js';
 
-export const POLYPHONIC_MATERIALIZER_VERSION = '0.1.0';
+export const POLYPHONIC_MATERIALIZER_VERSION = '0.2.0';
 export const POLYPHONIC_MATERIALIZER_MAX_SEGMENTS = 1_000_000;
 
 function fail(code, message, details = {}) {
@@ -29,27 +31,12 @@ function subtract(a, b) {
   );
 }
 
-function scale(value, factor) {
-  return rational(value.numerator * factor, value.denominator);
-}
-
 function minRational(a, b) {
   return compare(a, b) <= 0 ? a : b;
 }
 
 function maxRational(a, b) {
   return compare(a, b) >= 0 ? a : b;
-}
-
-function floorMeasureIndex(position, measureLength) {
-  const numerator = BigInt(position.numerator) * BigInt(measureLength.denominator);
-  const denominator = BigInt(position.denominator) * BigInt(measureLength.numerator);
-  if (denominator <= 0n) fail('INVALID_MEASURE_LENGTH', 'Measure length must be positive.');
-  const value = numerator / denominator;
-  if (value > BigInt(Number.MAX_SAFE_INTEGER)) {
-    fail('MEASURE_INDEX_OUT_OF_RANGE', 'Derived measure index exceeds the supported numeric envelope.');
-  }
-  return Number(value);
 }
 
 function validateQuantizedEvent(event, index) {
@@ -79,27 +66,68 @@ function buildHintMap(voiceCandidates) {
   return map;
 }
 
-function splitEventIntoMeasures(event, voiceHint, measureLength, segmentBudget) {
-  const eventEnd = add(event.onsetQuarter, event.durationQuarter);
+function eventEnd(event) {
+  return add(event.onsetQuarter, event.durationQuarter);
+}
+
+function maxEndQuarter(events) {
+  let best = rational(0, 1);
+  for (const event of events) {
+    const end = eventEnd(event);
+    if (compare(end, best) > 0) best = end;
+  }
+  return best;
+}
+
+function normalizeTopology(topology) {
+  if (!topology || !Array.isArray(topology.measures) || topology.measures.length === 0) {
+    fail('INVALID_MEASURE_TOPOLOGY', 'A non-empty measure topology is required.');
+  }
+  topology.measures.forEach((measure, index) => {
+    if (measure.measureIndex !== index || !measure.startQuarter || !measure.endQuarter || !measure.lengthQuarter) {
+      fail('INVALID_MEASURE_TOPOLOGY', 'Measure topology entries must be contiguous and carry rational boundaries.', { index });
+    }
+    if (compare(measure.endQuarter, measure.startQuarter) <= 0 || compare(measure.lengthQuarter, rational(0, 1)) <= 0) {
+      fail('INVALID_MEASURE_TOPOLOGY', 'Measure topology entries must have positive length.', { index });
+    }
+    if (index > 0 && compare(topology.measures[index - 1].endQuarter, measure.startQuarter) !== 0) {
+      fail('INVALID_MEASURE_TOPOLOGY', 'Measure topology boundaries must be contiguous.', { index });
+    }
+  });
+  return topology;
+}
+
+function findMeasureForPosition(measureTopology, positionQuarter) {
+  for (const measure of measureTopology.measures) {
+    if (compare(positionQuarter, measure.startQuarter) >= 0 && compare(positionQuarter, measure.endQuarter) < 0) return measure;
+  }
+  return null;
+}
+
+function splitEventIntoMeasures(event, voiceHint, measureTopology, segmentBudget) {
+  const end = eventEnd(event);
   const segments = [];
   let cursor = event.onsetQuarter;
   let segmentIndex = 0;
 
-  while (compare(cursor, eventEnd) < 0) {
+  while (compare(cursor, end) < 0) {
     if (segmentBudget.count >= POLYPHONIC_MATERIALIZER_MAX_SEGMENTS) {
       fail('POLYPHONIC_SEGMENT_LIMIT_EXCEEDED', 'Projection segment count exceeds the resource-safety envelope.', {
         limit: POLYPHONIC_MATERIALIZER_MAX_SEGMENTS,
       });
     }
 
-    const measureIndex = floorMeasureIndex(cursor, measureLength);
-    const measureStart = scale(measureLength, measureIndex);
-    const measureEnd = add(measureStart, measureLength);
-    const segmentEnd = minRational(eventEnd, measureEnd);
+    const measure = findMeasureForPosition(measureTopology, cursor);
+    if (!measure) {
+      fail('MEASURE_TOPOLOGY_DOES_NOT_COVER_EVENT', 'Measure topology does not cover a projected event.', {
+        eventId: event.eventId,
+        cursor,
+      });
+    }
+    const segmentEnd = minRational(end, measure.endQuarter);
     const durationQuarter = subtract(segmentEnd, cursor);
-
     if (durationQuarter.numerator <= 0) {
-      fail('INVALID_PROJECTED_SEGMENT', 'Projected segment duration must be positive.', { eventId: event.eventId, measureIndex });
+      fail('INVALID_PROJECTED_SEGMENT', 'Projected segment duration must be positive.', { eventId: event.eventId, measureIndex: measure.measureIndex });
     }
 
     segments.push(Object.freeze({
@@ -109,11 +137,11 @@ function splitEventIntoMeasures(event, voiceHint, measureLength, segmentBudget) 
       voiceAuthority: voiceHint.authority ?? 'NON_CANONICAL_HINT',
       voiceAmbiguous: voiceHint.ambiguous === true,
       midiPitch: event.midiPitch,
-      measureIndex,
-      onsetInMeasure: subtract(cursor, measureStart),
+      measureIndex: measure.measureIndex,
+      onsetInMeasure: subtract(cursor, measure.startQuarter),
       durationQuarter,
       tieFromPrevious: segmentIndex > 0,
-      tieToNext: compare(segmentEnd, eventEnd) < 0,
+      tieToNext: compare(segmentEnd, end) < 0,
       sourceOnsetQuarter: event.onsetQuarter,
       sourceDurationQuarter: event.durationQuarter,
     }));
@@ -126,7 +154,7 @@ function splitEventIntoMeasures(event, voiceHint, measureLength, segmentBudget) 
   return segments;
 }
 
-function materializeRestsForMeasure(voiceId, measureIndex, noteSegments, measureLength) {
+function materializeRestsForMeasure(voiceId, measure, noteSegments) {
   const ordered = [...noteSegments].sort((a, b) =>
     compare(a.onsetInMeasure, b.onsetInMeasure) ||
     a.midiPitch - b.midiPitch ||
@@ -139,9 +167,9 @@ function materializeRestsForMeasure(voiceId, measureIndex, noteSegments, measure
   for (const segment of ordered) {
     if (compare(segment.onsetInMeasure, cursor) > 0) {
       rests.push(Object.freeze({
-        restId: `${voiceId}:M${measureIndex + 1}:R${rests.length + 1}`,
+        restId: `${voiceId}:M${measure.measureIndex + 1}:R${rests.length + 1}`,
         voiceId,
-        measureIndex,
+        measureIndex: measure.measureIndex,
         onsetInMeasure: cursor,
         durationQuarter: subtract(segment.onsetInMeasure, cursor),
         scope: 'VOICE_GAP',
@@ -151,13 +179,13 @@ function materializeRestsForMeasure(voiceId, measureIndex, noteSegments, measure
     cursor = maxRational(cursor, end);
   }
 
-  if (compare(cursor, measureLength) < 0) {
+  if (compare(cursor, measure.lengthQuarter) < 0) {
     rests.push(Object.freeze({
-      restId: `${voiceId}:M${measureIndex + 1}:R${rests.length + 1}`,
+      restId: `${voiceId}:M${measure.measureIndex + 1}:R${rests.length + 1}`,
       voiceId,
-      measureIndex,
+      measureIndex: measure.measureIndex,
       onsetInMeasure: cursor,
-      durationQuarter: subtract(measureLength, cursor),
+      durationQuarter: subtract(measure.lengthQuarter, cursor),
       scope: 'VOICE_GAP',
     }));
   }
@@ -165,7 +193,7 @@ function materializeRestsForMeasure(voiceId, measureIndex, noteSegments, measure
   return Object.freeze(rests);
 }
 
-function materializeVoices(segments, measureLength) {
+function materializeVoices(segments, measureTopology) {
   const voiceMap = new Map();
   for (const segment of segments) {
     const list = voiceMap.get(segment.voiceId) ?? [];
@@ -189,11 +217,20 @@ function materializeVoices(segments, measureLength) {
       const measures = [];
 
       for (let measureIndex = firstMeasureIndex; measureIndex <= lastMeasureIndex; measureIndex += 1) {
+        const topologyMeasure = measureTopology.measures[measureIndex];
+        if (!topologyMeasure) fail('MEASURE_TOPOLOGY_DOES_NOT_COVER_VOICE', 'Voice projection references a missing measure.', { voiceId, measureIndex });
         const notes = Object.freeze([...(measureMap.get(measureIndex) ?? [])].sort((a, b) =>
           compare(a.onsetInMeasure, b.onsetInMeasure) || a.midiPitch - b.midiPitch || a.segmentId.localeCompare(b.segmentId)
         ));
-        const rests = materializeRestsForMeasure(voiceId, measureIndex, notes, measureLength);
-        measures.push(Object.freeze({ measureIndex, notes, rests }));
+        const rests = materializeRestsForMeasure(voiceId, topologyMeasure, notes);
+        measures.push(Object.freeze({
+          measureIndex,
+          lengthQuarter: topologyMeasure.lengthQuarter,
+          meterNumerator: topologyMeasure.meterNumerator,
+          meterDenominator: topologyMeasure.meterDenominator,
+          notes,
+          rests,
+        }));
       }
 
       return Object.freeze({
@@ -229,10 +266,15 @@ function projectionWarnings(voiceCandidates) {
   return Object.freeze(warnings);
 }
 
-export function materializePolyphonicScore(quantizedEvents, voiceCandidates, context) {
+export function materializePolyphonicScore(quantizedEvents, voiceCandidates, context, options = {}) {
   if (!Array.isArray(quantizedEvents)) fail('INVALID_QUANTIZED_EVENT_LIST', 'quantizedEvents must be an array.');
+  if (options === null || typeof options !== 'object' || Array.isArray(options)) fail('INVALID_POLYPHONIC_MATERIALIZER_OPTIONS', 'options must be a plain object.');
   const hintMap = buildHintMap(voiceCandidates);
-  const measureLength = measureLengthQuarter(context);
+  const fallbackMeasureLength = measureLengthQuarter(context);
+  const measureTopology = normalizeTopology(options.measureTopology ?? buildMeasureTopology(
+    createConstantTimingMapFromContext(context),
+    maxEndQuarter(quantizedEvents),
+  ));
   const segmentBudget = { count: 0 };
   const segments = [];
 
@@ -243,19 +285,20 @@ export function materializePolyphonicScore(quantizedEvents, voiceCandidates, con
     if (!hint) {
       fail('VOICE_HINT_MISSING_FOR_EVENT', 'Every projected event requires a voice hint.', { eventId: event.eventId });
     }
-    segments.push(...splitEventIntoMeasures(event, hint, measureLength, segmentBudget));
+    segments.push(...splitEventIntoMeasures(event, hint, measureTopology, segmentBudget));
   }
 
-  const voices = quantizedEvents.length === 0 ? Object.freeze([]) : materializeVoices(segments, measureLength);
+  const voices = quantizedEvents.length === 0 ? Object.freeze([]) : materializeVoices(segments, measureTopology);
   const tieCandidateCount = segments.filter((segment) => segment.tieToNext).length;
   const restCount = voices.reduce((sum, voice) => sum + voice.measures.reduce((inner, measure) => inner + measure.rests.length, 0), 0);
 
   return Object.freeze({
-    schemaVersion: 'polyphonic-score-projection-v0.1',
+    schemaVersion: 'polyphonic-score-projection-v0.2',
     materializerVersion: POLYPHONIC_MATERIALIZER_VERSION,
     authority: 'REVERSIBLE_HEURISTIC_PROJECTION',
     policy: 'POLYPHONY_IS_DEFAULT',
-    measureLengthQuarter: measureLength,
+    measureLengthQuarter: measureTopology.measures[0]?.nominalLengthQuarter ?? fallbackMeasureLength,
+    measureTopology,
     sourceEventCount: quantizedEvents.length,
     voiceCount: voices.length,
     segmentCount: segments.length,

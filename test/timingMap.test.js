@@ -87,11 +87,12 @@ test('timing maps fail closed when origin or ordering is invalid', () => {
 
 test('score draft exposes a constant provisional timing map without changing known-tempo behavior', () => {
   const draft = buildScoreDraft(rawEvents, context);
-  assert.equal(draft.schemaVersion, 'score-draft-v0.6');
+  assert.equal(draft.schemaVersion, 'score-draft-v0.7');
   assert.equal(draft.status, 'PASS');
   assert.equal(draft.context.bpm, 120);
   assert.equal(draft.timingMap.tempoChanges[0].bpm, 120);
   assert.equal(draft.timingMap.meterChanges[0].numerator, 4);
+  assert.equal(draft.measureTopology.measures.length, 1);
 });
 
 test('admitted beat-provider BPM is recorded in the timing-map authority metadata', () => {

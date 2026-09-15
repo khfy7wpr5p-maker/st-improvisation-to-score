@@ -1,6 +1,6 @@
 {
   "name": "st-improvisation-to-score",
-  "version": "0.12.0",
+  "version": "0.13.0",
   "private": false,
   "type": "module",
   "engines": {
@@ -8,6 +8,6 @@
   },
   "scripts": {
     "test": "node --test",
-    "check": "node --check src/contracts.js && node --check src/rhythmQuantizer.js && node --check src/timing/tempoCandidates.js && node --check src/timing/meterCandidates.js && node --check src/timing/localTempoSegments.js && node --check src/timing/timingMap.js && node --check src/timing/timingMapQuantizer.js && node --check src/polyphony/sonority.js && node --check src/polyphony/voiceCandidates.js && node --check src/polyphony/materialize.js && node --check src/export/musicXml.js && node --check src/scoreDraft.js && node --check src/adapters/basicPitch.js && node --check src/adapters/beatTempo.js && node --check src/adapters/scoreEditorSdk.js && node --check src/index.js"
+    "check": "node --check src/contracts.js && node --check src/rhythmQuantizer.js && node --check src/timing/tempoCandidates.js && node --check src/timing/meterCandidates.js && node --check src/timing/localTempoSegments.js && node --check src/timing/measureTopology.js && node --check src/timing/timingMap.js && node --check src/timing/timingMapQuantizer.js && node --check src/polyphony/sonority.js && node --check src/polyphony/voiceCandidates.js && node --check src/polyphony/materialize.js && node --check src/export/musicXml.js && node --check src/scoreDraft.js && node --check src/adapters/basicPitch.js && node --check src/adapters/beatTempo.js && node --check src/adapters/scoreEditorSdk.js && node --check src/index.js"
   }
 }

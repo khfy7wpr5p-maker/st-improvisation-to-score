@@ -76,13 +76,13 @@ test('ScoreDraft accepts multiple tempo segments while retaining one admitted me
     { eventId: 'after', midiPitch: 64, onsetSeconds: 3.0, offsetSeconds: 3.5 },
   ], context, { timingMap: map });
 
-  assert.equal(draft.schemaVersion, 'score-draft-v0.6');
+  assert.equal(draft.schemaVersion, 'score-draft-v0.7');
   assert.equal(draft.timingMap.tempoChanges.length, 2);
   assert.deepEqual(draft.quantizedEvents[0].onsetQuarter, rational(3, 1));
   assert.deepEqual(draft.quantizedEvents[1].onsetQuarter, rational(5, 1));
 });
 
-test('ScoreDraft does not silently project changing meter with the old constant-measure builder', () => {
+test('ScoreDraft now materializes changing meter instead of rejecting it', () => {
   const map = createTimingMap({
     tempoChanges: [{ positionQuarter: rational(0, 1), bpm: 120 }],
     meterChanges: [
@@ -90,7 +90,13 @@ test('ScoreDraft does not silently project changing meter with the old constant-
       { positionQuarter: rational(8, 1), numerator: 3, denominator: 4 },
     ],
   });
-  assert.throws(() => buildScoreDraft([], context, { timingMap: map }), /one meter segment/i);
+  const draft = buildScoreDraft([
+    { eventId: 'after-change', midiPitch: 60, onsetSeconds: 4.25, offsetSeconds: 4.75 },
+  ], context, { timingMap: map });
+
+  assert.equal(draft.status, 'PASS');
+  assert.equal(draft.measureTopology.measures.some((measure) => measure.meterNumerator === 3), true);
+  assert.equal(draft.diagnostics.length, 0);
 });
 
 test('timing-map origin tempo and meter must match the transcription context', () => {
