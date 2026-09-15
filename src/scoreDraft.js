@@ -6,6 +6,7 @@ import {
   rationalToNumber,
 } from './contracts.js';
 import { analyzeSonoritySpans } from './polyphony/sonority.js';
+import { analyzeVoiceCandidates } from './polyphony/voiceCandidates.js';
 import { quantizePerformance } from './rhythmQuantizer.js';
 
 function subtract(a, b) {
@@ -52,19 +53,16 @@ function buildMeasure(index, events, measureLength) {
   const output = [];
   const diagnostics = [];
   let cursor = rational(0, 1);
-  let sawOverlap = false;
 
   for (const group of groups) {
     const localOnset = group.events[0].onsetInMeasure;
     if (compare(localOnset, cursor) > 0) {
-      output.push(Object.freeze({ type: 'rest', onsetQuarter: cursor, durationQuarter: subtract(localOnset, cursor) }));
-    } else if (compare(localOnset, cursor) < 0) {
-      sawOverlap = true;
-      diagnostics.push(diagnostic(
-        'POLYPHONIC_OVERLAP_REQUIRES_REVIEW',
-        'An attack begins before the prior sounding group ends; Stage 00 does not invent a voice assignment.',
-        { measureIndex: index, eventIds: group.events.map((event) => event.eventId) },
-      ));
+      output.push(Object.freeze({
+        type: 'rest',
+        scope: 'GLOBAL_SILENCE',
+        onsetQuarter: cursor,
+        durationQuarter: subtract(localOnset, cursor),
+      }));
     }
 
     const groupDuration = maxRational(group.events.map((event) => event.durationQuarter));
@@ -72,7 +70,7 @@ function buildMeasure(index, events, measureLength) {
     if (compare(absoluteEnd, measureEnd) > 0) {
       diagnostics.push(diagnostic(
         'CROSS_MEASURE_NOTE_REQUIRES_TIE_RECONSTRUCTION',
-        'A quantized note crosses the measure boundary; Stage 00 preserves it for review and does not invent a tie.',
+        'A quantized note crosses the measure boundary; the draft is preserved and a later stage may materialize the tie/split.',
         { measureIndex: index, eventIds: group.events.map((event) => event.eventId) },
       ));
     }
@@ -108,14 +106,19 @@ function buildMeasure(index, events, measureLength) {
   }
 
   if (compare(cursor, measureLength) < 0) {
-    output.push(Object.freeze({ type: 'rest', onsetQuarter: cursor, durationQuarter: subtract(measureLength, cursor) }));
+    output.push(Object.freeze({
+      type: 'rest',
+      scope: 'GLOBAL_SILENCE',
+      onsetQuarter: cursor,
+      durationQuarter: subtract(measureLength, cursor),
+    }));
   }
 
   return Object.freeze({
     measureIndex: index,
     events: Object.freeze(output),
     diagnostics: Object.freeze(diagnostics),
-    reviewRequired: sawOverlap || diagnostics.length > 0,
+    reviewRequired: diagnostics.length > 0,
   });
 }
 
@@ -123,6 +126,7 @@ export function buildScoreDraft(rawEvents, contextInput) {
   const context = createTranscriptionContext(contextInput);
   const quantized = quantizePerformance(rawEvents, context);
   const polyphony = analyzeSonoritySpans(quantized);
+  const voiceCandidates = analyzeVoiceCandidates(quantized);
   const measureLength = measureLengthQuarter(context);
   const measureLengthNumber = rationalToNumber(measureLength);
   if (measureLengthNumber <= 0) throw new ImprovisationToScoreError('INVALID_MEASURE_LENGTH', 'Derived measure length must be positive.');
@@ -141,12 +145,14 @@ export function buildScoreDraft(rawEvents, contextInput) {
   }
 
   return Object.freeze({
-    schemaVersion: 'score-draft-v0.2',
+    schemaVersion: 'score-draft-v0.3',
     status: diagnostics.length === 0 ? 'PASS' : 'REVIEW_REQUIRED',
+    polyphonyPolicy: 'POLYPHONY_IS_DEFAULT',
     context,
     measureLengthQuarter: measureLength,
     quantizedEvents: quantized,
     polyphony,
+    voiceCandidates,
     measures: Object.freeze(measures),
     diagnostics: Object.freeze(diagnostics),
   });

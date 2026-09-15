@@ -12,6 +12,7 @@ MP3/WAV/M4A/FLAC/OGG
         -> musical-time mapping
         -> rhythm quantization
         -> sonority analysis
+        -> dynamic voice-strand hints
         -> measure/rest/chord reconstruction
         -> ScoreDraft
         -> ST Score Editor (planned)
@@ -22,11 +23,22 @@ MIDI is an optional diagnostic/export artifact, not the canonical bridge between
 
 ## Current development surface
 
-- **S00 Foundation — complete:** repository-owned contracts, rational notation timing, known-BPM/meter quantizer, chord grouping, explicit rests and CI.
+- **S00 Foundation — complete:** repository-owned contracts, rational notation timing, known-BPM/meter quantizer, chord grouping, global-silence rests and CI.
 - **S01 Basic Pitch Adapter — complete:** verified Basic Pitch provider result -> repository-owned raw events with preserved audio/model provenance.
-- **S02A Sonority Foundation — implemented:** exact rational half-open note intervals and deterministic `MONOPHONIC` / `CHORD_ATTACK` / `SUSTAINED_OVERLAP` sonority spans.
+- **S02A Sonority Foundation — complete:** exact rational half-open note intervals and deterministic `MONOPHONIC` / `CHORD_ATTACK` / `SUSTAINED_OVERLAP` sonority spans.
+- **S02B Polyphony-Default Voice Hints — implemented:** sustained overlap is normal musical evidence; dynamic voice strands grow as needed and continuation candidates remain non-canonical hints.
 
-The system still does not silently assign polyphonic voices. Sustained overlap remains review evidence until the bounded voice-candidate stage.
+## Polyphony policy
+
+**Polyphony is the default, not an exception.**
+
+- overlapping notes do not create `REVIEW_REQUIRED` by themselves;
+- sustained bass + moving upper voices are normal input;
+- voice count is not fixed to 2 or 4;
+- same-onset notes stay chord-like unless later evidence supports a split;
+- mixed-duration chords receive a split hint without blocking the draft;
+- ambiguous voice continuity keeps a preferred hint plus alternatives and does not block score generation;
+- teacher correction in ST Score Editor will remain final authority.
 
 ## Safety / authority rules
 
@@ -35,8 +47,8 @@ The system still does not silently assign polyphonic voices. Sustained overlap r
 - MIDI PPQ/ticks are not the canonical musical clock;
 - MusicXML divisions are not the internal clock;
 - provider confidence is never invented when unavailable;
-- unresolved polyphony produces `REVIEW_REQUIRED`, not an arbitrary voice assignment;
-- teacher correction in ST Score Editor will outrank generated draft decisions.
+- voice-candidate output is `NON_CANONICAL_HINT`, not a forced score truth;
+- hard failure is reserved for structurally invalid/unprocessable input or resource-safety violations, not normal musical complexity.
 
 ## Existing ST projects reused by boundary
 
@@ -53,4 +65,4 @@ npm test
 npm run check
 ```
 
-See `docs/ARCHITECTURE.md`, `docs/ROADMAP.md`, `docs/S01_BASIC_PITCH_ADAPTER.md`, and `docs/S02A_SONORITY_FOUNDATION.md`.
+See `docs/ARCHITECTURE.md`, `docs/ROADMAP.md`, `docs/S01_BASIC_PITCH_ADAPTER.md`, `docs/S02A_SONORITY_FOUNDATION.md`, and `docs/S02B_POLYPHONY_DEFAULT.md`.
