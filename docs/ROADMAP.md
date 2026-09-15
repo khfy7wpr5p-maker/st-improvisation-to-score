@@ -97,3 +97,17 @@ User-recording acceptance no longer requires Score Editor. The default path is:
 Score Editor and Guitar TAB are optional downstream capabilities and are used only when explicitly requested.
 
 A user-owned guitar improvisation recording has reached audio preflight successfully. Canonical transcription quality claims still require the pinned Basic Pitch provider output plus teacher-reviewed corrections. Missing provider runtime must be reported as `TRANSCRIPTION_UNAVAILABLE`; it must not be replaced with a heuristic transcription and must not turn Score Editor availability into a prerequisite.
+
+## S11 — Browser MP3/WAV → MusicXML MVP — CURRENT
+
+The first user-facing application is intentionally narrow:
+
+`audio file -> browser Basic Pitch TS -> ST rhythm/polyphony reconstruction -> MusicXML download`
+
+- no Score Editor prerequisite;
+- audio inference runs locally in the browser;
+- `@spotify/basic-pitch@1.0.1` note events are adapted directly, without promoting generated MIDI to score authority;
+- automatic tempo remains provisional when evidence is weak or half/double ambiguous;
+- MusicXML remains downloadable under `REVIEW_REQUIRED` when score content is usable;
+- the UI exposes file selection, tempo, meter, rhythmic resolution, progress, diagnostics and MusicXML download;
+- S10 teacher acceptance remains the authority for real-world quality claims.
