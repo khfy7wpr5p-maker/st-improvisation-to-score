@@ -32,6 +32,15 @@ export {
 } from './adapters/basicPitch.js';
 
 export {
+  BROWSER_BASIC_PITCH_ADAPTER_VERSION,
+  BROWSER_BASIC_PITCH_PROVIDER_ID,
+  BROWSER_BASIC_PITCH_PACKAGE_VERSION,
+  BROWSER_BASIC_PITCH_SOURCE_AUTHORITY,
+  BROWSER_BASIC_PITCH_MAX_NOTE_EVENTS,
+  adaptBrowserBasicPitchNoteEvents,
+} from './adapters/basicPitchBrowser.js';
+
+export {
   BEAT_TEMPO_ADAPTER_VERSION,
   BEAT_TEMPO_MAX_BEATS,
   BEAT_TEMPO_MAX_CANDIDATES,
@@ -86,6 +95,11 @@ export {
   USER_RECORDING_ACCEPTANCE_VERSION,
   runUserRecordingAcceptance,
 } from './pipeline/userRecordingAcceptance.js';
+
+export {
+  BROWSER_MUSICXML_PIPELINE_VERSION,
+  buildBrowserMusicXmlFromBasicPitch,
+} from './pipeline/browserMusicXml.js';
 
 export {
   POLYPHONIC_MATERIALIZER_MAX_SEGMENTS,
