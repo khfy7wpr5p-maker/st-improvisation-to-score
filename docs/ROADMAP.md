@@ -45,18 +45,22 @@ Variable measure topology, off-barline meter-change transition measures, explici
 ## S06A — Teacher Correction Ledger — COMPLETE
 Append-only teacher authority, open-ended correction dimensions, supersession/revert history and score-level missing-event evidence without destructive source rewrites.
 
-## S06B — Teacher Calibration Metrics — CURRENT
+## S06B — Teacher Calibration Metrics — COMPLETE
+Independent pitch/onset/duration/rhythm/voice quality metrics, denominator-aware correction rates and category-specific confidence calibration without one misleading combined score.
 
-- report pitch, onset, duration, rhythm and voice separately;
-- count distinct active corrected targets rather than raw edit clicks;
-- calculate correction rate only when a teacher-reviewed denominator exists;
-- withhold misleading rates when denominator evidence is inconsistent;
-- calibrate confidence per category with empirical accuracy, Brier score, ECE and bins;
-- preserve future uncategorized observations without mixing them into core metrics;
-- intentionally do not emit one combined accuracy score.
+## S06C — Teacher Overlay / Score Rebuild — CURRENT
 
-## S06C — Teacher Overlay / Score Rebuild — NEXT
-Apply active teacher corrections as a reversible overlay to editable score state while preserving source-event identity, correction ledger history and the original machine draft.
+- apply active teacher corrections as a derived overlay while preserving the original machine draft;
+- rebuild from corrected quantized score state rather than re-quantizing corrected teacher timing;
+- support pitch, onset, duration, rhythm, voice, spurious-event deletion and missing-event insertion;
+- preserve teacher voice authority through polyphonic materialization;
+- preserve source score extent/pickup by default;
+- keep unsupported future correction dimensions in the ledger and expose non-blocking unapplied warnings;
+- make revert restore machine-derived state on the next rebuild;
+- keep corrected draft directly MusicXML/Score Editor compatible.
+
+## S06D — Editor Correction Round Trip — NEXT
+Map Score Editor edit operations into the teacher ledger/overlay contract and prove edit -> ledger -> rebuild -> MusicXML round trip through the public SDK boundary.
 
 ## S07 — Optional Guitar TAB Handoff
 Reviewed MusicXML -> Guitar TAB. TAB failure must never invalidate the source score draft.

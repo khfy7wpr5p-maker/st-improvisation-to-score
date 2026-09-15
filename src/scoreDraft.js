@@ -3,6 +3,7 @@ import {
   createTranscriptionContext,
   rational,
 } from './contracts.js';
+import { finalizeQuantizedPerformance } from './rhythmQuantizer.js';
 import { materializePolyphonicScore } from './polyphony/materialize.js';
 import { analyzeSonoritySpans } from './polyphony/sonority.js';
 import { analyzeVoiceCandidates } from './polyphony/voiceCandidates.js';
@@ -58,6 +59,18 @@ function maxEndQuarter(events) {
     if (compare(end, best) > 0) best = end;
   }
   return best;
+}
+
+function normalizedMinimumEnd(value) {
+  if (value === undefined || value === null) return null;
+  if (typeof value !== 'object' || Array.isArray(value)) {
+    throw new ImprovisationToScoreError('INVALID_MINIMUM_SCORE_EXTENT', 'minimumEndQuarter must be a rational object.');
+  }
+  const normalized = rational(value.numerator, value.denominator);
+  if (normalized.numerator < 0) {
+    throw new ImprovisationToScoreError('INVALID_MINIMUM_SCORE_EXTENT', 'minimumEndQuarter must be non-negative.');
+  }
+  return normalized;
 }
 
 function globalSilenceRests(measure, events) {
@@ -165,23 +178,40 @@ function buildMeasure(measure, events) {
   });
 }
 
-export function buildScoreDraft(rawEvents, contextInput, options = {}) {
-  if (options === null || typeof options !== 'object' || Array.isArray(options)) {
-    throw new ImprovisationToScoreError('INVALID_SCORE_DRAFT_OPTIONS', 'Score draft options must be a plain object.');
-  }
-  const context = createTranscriptionContext(contextInput);
-  const timingMap = options.timingMap === undefined
-    ? createConstantTimingMapFromContext(context, options.timingMapMetadata ?? {})
-    : createTimingMap(options.timingMap);
+function applyVoiceHintOverrides(voiceCandidates, overrides) {
+  if (!(overrides instanceof Map) || overrides.size === 0) return voiceCandidates;
+  const hints = voiceCandidates.eventVoiceHints.map((hint) => {
+    const override = overrides.get(hint.eventId);
+    if (override === undefined) return hint;
+    return Object.freeze({
+      ...hint,
+      preferredVoiceId: override,
+      authority: 'TEACHER_CONFIRMED',
+      ambiguous: false,
+    });
+  });
+  const voiceIds = new Set(hints.map((hint) => hint.preferredVoiceId));
+  return Object.freeze({
+    ...voiceCandidates,
+    eventVoiceHints: Object.freeze(hints),
+    voiceCountHint: voiceIds.size,
+    teacherVoiceOverrideCount: [...overrides.keys()].filter((eventId) => hints.some((hint) => hint.eventId === eventId)).length,
+  });
+}
 
-  const quantized = quantizePerformanceWithTimingMap(rawEvents, context, timingMap);
-  const maxEnd = maxEndQuarter(quantized);
+function assembleScoreDraft(quantizedInput, context, timingMap, options = {}) {
+  const quantized = finalizeQuantizedPerformance([...quantizedInput]);
+  let maxEnd = maxEndQuarter(quantized);
+  const minimumEnd = normalizedMinimumEnd(options.minimumEndQuarter);
+  if (minimumEnd !== null && compare(minimumEnd, maxEnd) > 0) maxEnd = minimumEnd;
+
   const measureTopology = buildMeasureTopology(timingMap, maxEnd, {
     pickupLengthQuarter: options.pickupLengthQuarter,
     maxMeasures: options.maxMeasures,
   });
   const polyphony = analyzeSonoritySpans(quantized);
-  const voiceCandidates = analyzeVoiceCandidates(quantized);
+  const inferredVoiceCandidates = analyzeVoiceCandidates(quantized);
+  const voiceCandidates = applyVoiceHintOverrides(inferredVoiceCandidates, options.voiceHintOverrides);
   const polyphonicProjection = materializePolyphonicScore(quantized, voiceCandidates, context, { measureTopology });
   const measures = Object.freeze(measureTopology.measures.map((measure) => buildMeasure(measure, quantized)));
   const warnings = Object.freeze([...measureTopology.warnings, ...polyphonicProjection.warnings]);
@@ -202,4 +232,30 @@ export function buildScoreDraft(rawEvents, contextInput, options = {}) {
     diagnostics: Object.freeze([]),
     warnings,
   });
+}
+
+export function buildScoreDraftFromQuantizedEvents(quantizedEvents, contextInput, options = {}) {
+  if (!Array.isArray(quantizedEvents)) {
+    throw new ImprovisationToScoreError('INVALID_EVENT_LIST', 'quantizedEvents must be an array.');
+  }
+  if (options === null || typeof options !== 'object' || Array.isArray(options)) {
+    throw new ImprovisationToScoreError('INVALID_SCORE_DRAFT_OPTIONS', 'Score draft options must be a plain object.');
+  }
+  const context = createTranscriptionContext(contextInput);
+  const timingMap = options.timingMap === undefined
+    ? createConstantTimingMapFromContext(context, options.timingMapMetadata ?? {})
+    : createTimingMap(options.timingMap);
+  return assembleScoreDraft(quantizedEvents, context, timingMap, options);
+}
+
+export function buildScoreDraft(rawEvents, contextInput, options = {}) {
+  if (options === null || typeof options !== 'object' || Array.isArray(options)) {
+    throw new ImprovisationToScoreError('INVALID_SCORE_DRAFT_OPTIONS', 'Score draft options must be a plain object.');
+  }
+  const context = createTranscriptionContext(contextInput);
+  const timingMap = options.timingMap === undefined
+    ? createConstantTimingMapFromContext(context, options.timingMapMetadata ?? {})
+    : createTimingMap(options.timingMap);
+  const quantized = quantizePerformanceWithTimingMap(rawEvents, context, timingMap);
+  return assembleScoreDraft(quantized, context, timingMap, options);
 }
