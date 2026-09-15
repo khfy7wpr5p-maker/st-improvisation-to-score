@@ -98,7 +98,7 @@ Score Editor and Guitar TAB are optional downstream capabilities and are used on
 
 A user-owned guitar improvisation recording has reached audio preflight successfully. Canonical transcription quality claims still require the pinned Basic Pitch provider output plus teacher-reviewed corrections. Missing provider runtime must be reported as `TRANSCRIPTION_UNAVAILABLE`; it must not be replaced with a heuristic transcription and must not turn Score Editor availability into a prerequisite.
 
-## S11 — Browser MP3/WAV → MusicXML MVP — CURRENT
+## S11 — Browser MP3/WAV → MusicXML MVP — IMPLEMENTATION COMPLETE
 
 The first user-facing application is intentionally narrow:
 
@@ -110,4 +110,11 @@ The first user-facing application is intentionally narrow:
 - automatic tempo remains provisional when evidence is weak or half/double ambiguous;
 - MusicXML remains downloadable under `REVIEW_REQUIRED` when score content is usable;
 - the UI exposes file selection, tempo, meter, rhythmic resolution, progress, diagnostics and MusicXML download;
+- Node 20/22, Score Editor regression, Guitar TAB regression and real-audio E2E gates passed on the implementation HEAD;
+- a Vercel preview and production deployment were created with the S11 code pinned to the validated repository commit;
+- GitHub Pages was intentionally removed from the active deployment path because the repository Pages feature is not enabled;
 - S10 teacher acceptance remains the authority for real-world quality claims.
+
+## S11C — Real-device Browser Audio Smoke — NEXT
+
+Open the production browser MVP on the target phone/desktop, run a short WAV/MP3 through the in-browser Basic Pitch model, verify progress and MusicXML download, then run the longer user-owned guitar improvisation. Browser/device memory or codec problems should be handled as local capability diagnostics rather than by weakening the musical reconstruction contract.
