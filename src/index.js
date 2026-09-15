@@ -63,6 +63,12 @@ export {
 } from './export/musicXml.js';
 
 export {
+  SCORE_DRAFT_SOURCE_NOTE_IDENTITY_VERSION,
+  createScoreDraftEditorMusicXmlPayload,
+  createScoreDraftSourceNoteIdentity,
+} from './export/musicXmlSourceIdentity.js';
+
+export {
   POLYPHONIC_MATERIALIZER_MAX_SEGMENTS,
   POLYPHONIC_MATERIALIZER_VERSION,
   materializePolyphonicScore,
