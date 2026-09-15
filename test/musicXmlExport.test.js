@@ -24,8 +24,8 @@ test('polyphonic draft serializes multiple voices with backup', () => {
   const xml = serializeScoreDraftToMusicXml(draft, { title: 'Polyphonic Test', partName: 'Guitar' });
 
   assert.match(xml, /<score-partwise version="4\.0">/);
-  assert.match(xml, /<work-title>Polyphonic Test<\/work-title>/);
   assert.match(xml, /<part-name>Guitar<\/part-name>/);
+  assert.equal(xml.includes('<work>'), false);
   assert.match(xml, /<voice>1<\/voice>/);
   assert.match(xml, /<voice>2<\/voice>/);
   assert.match(xml, /<backup>/);
