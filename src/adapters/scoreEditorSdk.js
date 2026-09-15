@@ -4,7 +4,7 @@ import {
   serializeScoreDraftToMusicXml,
 } from '../export/musicXml.js';
 
-export const SCORE_EDITOR_SDK_BRIDGE_VERSION = '0.1.0';
+export const SCORE_EDITOR_SDK_BRIDGE_VERSION = '0.2.0';
 export const SCORE_EDITOR_SDK_REQUIRED_VERSION = '1.0.0';
 
 function bridgeFailure(code, message, { musicXml = null, manifest = null, details = {} } = {}) {
@@ -76,6 +76,7 @@ export async function openScoreDraftInEditor(sdk, draft, options = {}) {
       ...(options.title ? { title: options.title } : {}),
       ...(options.documentId ? { documentId: options.documentId } : {}),
       ...(options.revisionId ? { revisionId: options.revisionId } : {}),
+      ...(typeof options.sha256Hex === 'function' ? { sha256Hex: options.sha256Hex } : {}),
     });
   } catch (error) {
     return bridgeFailure('SCORE_EDITOR_OPEN_MUSICXML_FAILED', error instanceof Error ? error.message : String(error), {
