@@ -19,10 +19,10 @@ MP3/WAV/M4A/FLAC/OGG
 
 MIDI is an optional diagnostic/export artifact, not the canonical bridge between audio and notation.
 
-## Current verified development surface
+## Current development surface
 
-- **S00 Foundation — merged:** repository-owned event/context contracts, rational notation timing, known-BPM/meter quantizer, chord grouping, explicit rests, review diagnostics and CI.
-- **S01 Basic Pitch Adapter — implemented on development branch:** maps the already-existing `st-omr-correction-engine` Basic Pitch provider result into repository-owned raw events while preserving audio/model provenance and source authority.
+- **S00 Foundation — complete:** repository-owned event/context contracts, rational notation timing, known-BPM/meter quantizer, chord grouping, explicit rests, review diagnostics and CI.
+- **S01 Basic Pitch Adapter — implemented:** maps the verified `st-omr-correction-engine` Basic Pitch provider result into repository-owned raw events while preserving audio/model provenance and source authority.
 
 The S01 adapter deliberately does not copy generated MIDI bytes into canonical transcription state. It preserves only generated-MIDI SHA-256 provenance; score drafting consumes Basic Pitch note events directly.
 

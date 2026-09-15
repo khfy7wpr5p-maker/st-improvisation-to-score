@@ -1,6 +1,6 @@
 # S01 — Basic Pitch Adapter
 
-Status: **IMPLEMENTED / PENDING CI**
+Status: **IMPLEMENTED**
 
 ## Upstream contract read
 
