@@ -1,0 +1,40 @@
+name: Guitar TAB Runtime Conformance
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  guitar-tab-runtime:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout transcription engine
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install transcription engine
+        run: npm install --ignore-scripts --no-audit --no-fund
+
+      - name: Checkout pinned Guitar TAB engine
+        uses: actions/checkout@v4
+        with:
+          repository: khfy7wpr5p-maker/musicxml-to-guitar-tab-engine
+          ref: 1d8ced644f544f7e991f7275eda77a2ce557774e
+          path: .integration/musicxml-to-guitar-tab-engine
+
+      - name: Install Guitar TAB engine
+        working-directory: .integration/musicxml-to-guitar-tab-engine
+        run: npm install --ignore-scripts --no-audit --no-fund
+
+      - name: Run real Guitar TAB handoff
+        run: node scripts/guitarTabRuntimeConformance.mjs .integration/musicxml-to-guitar-tab-engine/src/index.js
