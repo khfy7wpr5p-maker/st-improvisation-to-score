@@ -51,18 +51,19 @@ Independent pitch/onset/duration/rhythm/voice quality metrics, denominator-aware
 ## S06C — Teacher Overlay / Score Rebuild — COMPLETE
 Reversible pitch/onset/duration/rhythm/voice/event overlays rebuild downstream score structure without mutating or re-quantizing the original machine draft.
 
-## S06D — Score Editor Teacher Edit Receipts — CURRENT
+## S06D — Score Editor Teacher Edit Receipts — COMPLETE
+Public authoring receipts feed teacher ledger/overlay rebuild without importing private Score Editor packages or guessing source identity.
 
-- consume public Score Editor SDK `1.0.0` authoring action receipts without importing private editor packages;
-- preserve action id, document/revision provenance and before/after evidence in the teacher ledger;
-- use explicit host-kept `sourceEventId` when available; never infer source identity from opaque editor IDs or target ordering;
-- let unmapped editor targets remain auditable/non-blocking until an identity bridge is available;
-- map public duration edits to teacher duration overlay while keeping accidental/tie/slur semantics as notation evidence;
-- prove real public `authoring.commitKeypad` -> host receipt -> ledger -> overlay rebuild -> MusicXML -> public SDK reopen/export;
-- keep `teacherWorkflow: false` limitation explicit rather than claiming an SDK edit journal that does not exist.
+## S06E — Source Identity Transport — COMPLETE
+Dedicated Score Editor handoff MusicXML carries safe per-segment source-note ids; public SDK revision-aware mappings resolve them back to stable repository `sourceEventId` values.
 
-## S06E — Source Identity Transport — NEXT
-Create a durable source-event identity bridge across generated MusicXML and Score Editor public boundaries, or adopt a future public `teacherWorkflow`/edit-journal capability when available. Do not rely on import order as identity.
+## S07 — Optional Guitar TAB Handoff — COMPLETE
 
-## S07 — Optional Guitar TAB Handoff
-Reviewed MusicXML -> Guitar TAB. TAB failure must never invalidate the source score draft.
+- consume reviewed MusicXML through a host-injected Guitar TAB capability;
+- prefer the pinned engine's capability-driven polyphonic application runtime, with the narrower package-root converter only as a fallback for compatible simple scores;
+- keep TAB derived and optional, never canonical score authority;
+- preserve source MusicXML when the TAB engine is absent, runtime-blocked or fails conversion;
+- preserve provisional/review-required TAB when the runtime reports `generateTab` capability instead of treating teacher review as a global lock;
+- isolate optional artifact failures to the affected artifact;
+- pin and continuously test the real `musicxml-to-guitar-tab-engine` runtime;
+- never let TAB failure invalidate source notation or Score Editor work.

@@ -41,6 +41,12 @@ export {
 } from './adapters/beatTempo.js';
 
 export {
+  GUITAR_TAB_ENGINE_PINNED_SHA,
+  GUITAR_TAB_HANDOFF_VERSION,
+  handoffMusicXmlToOptionalGuitarTab,
+} from './adapters/guitarTabEngine.js';
+
+export {
   SCORE_EDITOR_SDK_BRIDGE_VERSION,
   SCORE_EDITOR_SDK_REQUIRED_VERSION,
   exportMusicXmlFromEditor,
