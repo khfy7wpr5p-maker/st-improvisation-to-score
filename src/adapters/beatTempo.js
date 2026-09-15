@@ -189,7 +189,13 @@ export function buildScoreDraftFromBeatTempoProvider(rawEvents, providerResult, 
   const evidence = adaptBeatTempoProviderResult(providerResult, options.gate ?? options);
 
   if (contextTemplate.bpm !== undefined && contextTemplate.bpm !== null) {
-    const draft = buildScoreDraft(rawEvents, contextTemplate);
+    const draft = buildScoreDraft(rawEvents, contextTemplate, {
+      timingMapMetadata: {
+        source: 'USER_TRANSCRIPTION_CONTEXT',
+        tempoSourceAuthority: 'USER_SUPPLIED',
+        meterSourceAuthority: 'TRANSCRIPTION_CONTEXT',
+      },
+    });
     return Object.freeze({
       schemaVersion: 'auto-tempo-score-result-v0.1',
       status: 'USER_TEMPO_DRAFT_READY',
@@ -211,7 +217,13 @@ export function buildScoreDraftFromBeatTempoProvider(rawEvents, providerResult, 
     });
   }
 
-  const draft = buildScoreDraft(rawEvents, { ...contextTemplate, bpm: evidence.admittedBpm });
+  const draft = buildScoreDraft(rawEvents, { ...contextTemplate, bpm: evidence.admittedBpm }, {
+    timingMapMetadata: {
+      source: 'BEAT_TEMPO_TRANSCRIPTION_CONTEXT',
+      tempoSourceAuthority: 'ADMITTED_BEAT_PROVIDER_EVIDENCE',
+      meterSourceAuthority: 'TRANSCRIPTION_CONTEXT',
+    },
+  });
   return Object.freeze({
     schemaVersion: 'auto-tempo-score-result-v0.1',
     status: 'AUTO_TEMPO_DRAFT_READY',

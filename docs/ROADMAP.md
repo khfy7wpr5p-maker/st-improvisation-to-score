@@ -27,20 +27,24 @@ Bounded onset-derived BPM hypotheses, chord-jitter attack grouping, confidence a
 ## S04B — Beat / Tempo Provider — COMPLETE
 Validated beat-provider evidence, independent beat-period BPM check, consistency/confidence gates and user-BPM precedence.
 
-## S04C — Meter Candidates — CURRENT
+## S04C — Meter Candidates — COMPLETE
+Bounded beat-accent cycle ranking, downbeat phase hints and explicit denominator non-inference. Meter output remains non-canonical.
 
-- preserve optional beat-strength evidence from the beat provider;
-- rank bounded accent-cycle lengths and downbeat phases;
-- keep related cycle ambiguity explicit;
-- never infer a beat-unit denominator from accent strength alone;
-- allow a caller-supplied beat-unit hint to make a meter context usable;
-- keep meter output `NON_CANONICAL_METER_HINT` until teacher/provider confirmation.
+## S05A — Timing Map Foundation — CURRENT
 
-## S05A — Timing Map Foundation — NEXT
-Repository-owned provisional TempoMap/MeterMap contract with constant initial segments and explicit authority metadata.
+- repository-owned provisional timing-map contract;
+- separate ordered tempo and meter change sequences keyed by rational quarter position;
+- origin-at-zero and strict-ordering invariants;
+- per-change source authority;
+- constant current context represented as one timing segment;
+- user BPM and admitted provider BPM retain distinct timing-map provenance;
+- no implicit sorting, repair or inferred extra changes.
 
-## S05B — Rubato / Expressive Time
-Local tempo segments, phrase-aware quantization and pickup inference without changing pitch-event identity.
+## S05B — Piecewise Tempo Mapping — NEXT
+Map source seconds through multiple tempo segments and quantize against local musical time without changing pitch-event identity.
+
+## S05C — Rubato / Expressive Time
+Infer bounded local tempo segments from stronger beat evidence; phrase-aware quantization and pickup inference remain provisional.
 
 ## S06 — Teacher Calibration
 Versioned teacher corrections, separate pitch/onset/duration/rhythm/voice metrics and calibrated confidence.

@@ -80,3 +80,13 @@ export {
   TEMPO_CANDIDATE_MAX_EVENTS,
   analyzeTempoCandidates,
 } from './timing/tempoCandidates.js';
+
+export {
+  TIMING_MAP_AUTHORITY,
+  TIMING_MAP_MAX_CHANGES,
+  TIMING_MAP_VERSION,
+  createConstantTimingMapFromContext,
+  createTimingMap,
+  effectiveMeterAtQuarter,
+  effectiveTempoAtQuarter,
+} from './timing/timingMap.js';

@@ -9,6 +9,7 @@ import { materializePolyphonicScore } from './polyphony/materialize.js';
 import { analyzeSonoritySpans } from './polyphony/sonority.js';
 import { analyzeVoiceCandidates } from './polyphony/voiceCandidates.js';
 import { quantizePerformance } from './rhythmQuantizer.js';
+import { createConstantTimingMapFromContext } from './timing/timingMap.js';
 
 function subtract(a, b) {
   return rational(a.numerator * b.denominator - b.numerator * a.denominator, a.denominator * b.denominator);
@@ -153,8 +154,12 @@ function buildMeasure(index, events, measureLength) {
   });
 }
 
-export function buildScoreDraft(rawEvents, contextInput) {
+export function buildScoreDraft(rawEvents, contextInput, options = {}) {
+  if (options === null || typeof options !== 'object' || Array.isArray(options)) {
+    throw new ImprovisationToScoreError('INVALID_SCORE_DRAFT_OPTIONS', 'Score draft options must be a plain object.');
+  }
   const context = createTranscriptionContext(contextInput);
+  const timingMap = createConstantTimingMapFromContext(context, options.timingMapMetadata ?? {});
   const quantized = quantizePerformance(rawEvents, context);
   const polyphony = analyzeSonoritySpans(quantized);
   const voiceCandidates = analyzeVoiceCandidates(quantized);
@@ -174,10 +179,11 @@ export function buildScoreDraft(rawEvents, contextInput) {
   }
 
   return Object.freeze({
-    schemaVersion: 'score-draft-v0.4',
+    schemaVersion: 'score-draft-v0.5',
     status: 'PASS',
     polyphonyPolicy: 'POLYPHONY_IS_DEFAULT',
     context,
+    timingMap,
     measureLengthQuarter: measureLength,
     quantizedEvents: quantized,
     polyphony,
