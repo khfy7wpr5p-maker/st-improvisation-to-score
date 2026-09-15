@@ -57,12 +57,13 @@ Public authoring receipts feed teacher ledger/overlay rebuild without importing 
 ## S06E — Source Identity Transport — COMPLETE
 Dedicated Score Editor handoff MusicXML carries safe per-segment source-note ids; public SDK revision-aware mappings resolve them back to stable repository `sourceEventId` values.
 
-## S07 — Optional Guitar TAB Handoff — CURRENT
+## S07 — Optional Guitar TAB Handoff — COMPLETE
 
-- consume reviewed MusicXML through the Guitar TAB engine package-root contract;
+- consume reviewed MusicXML through a host-injected Guitar TAB capability;
+- prefer the pinned engine's capability-driven polyphonic application runtime, with the narrower package-root converter only as a fallback for compatible simple scores;
 - keep TAB derived and optional, never canonical score authority;
-- preserve source MusicXML when the TAB engine is absent, preflight-blocked or fails conversion;
-- expose provisional/review-required TAB instead of treating teacher review as a global lock;
-- isolate JSON/ASCII/TAB-MusicXML serializer failures to the affected artifact;
-- pin and continuously test a real `musicxml-to-guitar-tab-engine` runtime;
+- preserve source MusicXML when the TAB engine is absent, runtime-blocked or fails conversion;
+- preserve provisional/review-required TAB when the runtime reports `generateTab` capability instead of treating teacher review as a global lock;
+- isolate optional artifact failures to the affected artifact;
+- pin and continuously test the real `musicxml-to-guitar-tab-engine` runtime;
 - never let TAB failure invalidate source notation or Score Editor work.
