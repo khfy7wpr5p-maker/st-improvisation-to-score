@@ -131,3 +131,10 @@ export {
   summarizeTeacherCorrections,
   teacherCorrectionCategory,
 } from './teacher/correctionLedger.js';
+
+export {
+  TEACHER_CALIBRATION_CORE_CATEGORIES,
+  TEACHER_CALIBRATION_MAX_OBSERVATIONS,
+  TEACHER_CALIBRATION_METRICS_VERSION,
+  buildTeacherCalibrationReport,
+} from './teacher/calibrationMetrics.js';
