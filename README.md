@@ -15,10 +15,12 @@ MP3/WAV/M4A/FLAC/OGG
   -> per-voice rests + tie candidates
   -> MusicXML projection
   -> ST Score Editor public SDK
+  -> durable source identity
   -> teacher correction / MusicXML export
+  -> optional Guitar TAB handoff
 ```
 
-MIDI remains optional diagnostic/export data. It is not the canonical bridge from audio to notation.
+MIDI remains optional diagnostic/export data. It is not the canonical bridge from audio to notation. Guitar TAB is also derived/optional and never replaces the source score.
 
 ## Implemented stages
 
@@ -27,17 +29,21 @@ MIDI remains optional diagnostic/export data. It is not the canonical bridge fro
 - **S02A Sonority — complete:** rational half-open active-note spans.
 - **S02B Polyphony-Default Voice Hints — complete:** dynamic voice strands; polyphony is normal input, not an error.
 - **S02C Polyphonic Materialization — complete:** reversible per-voice measures/rests and cross-measure tie candidates.
-- **S03A Score Editor Public Bridge — implemented:** ScoreDraft -> MusicXML plus an injected Score Editor SDK `1.0.0` public-boundary bridge.
+- **S03A/S03B Score Editor Bridge — complete:** public SDK MusicXML open/export plus real pinned runtime conformance.
+- **S04A–S05D Timing — complete:** tempo/meter candidates, provider admission, piecewise timing, local tempo and changing-meter/pickup projection.
+- **S06A–S06E Teacher Workflow — complete:** append-only teacher ledger, calibration, reversible overlay, public authoring receipts and durable source identity through Score Editor edits.
+- **S07 Optional Guitar TAB — current:** reviewed MusicXML -> optional pinned Guitar TAB engine; TAB failure remains local and source notation stays usable.
 
 ## Product policy
 
-**Polyphony is the default. Musical complexity should produce the best usable draft, not unnecessary blocking.**
+**Polyphony and musical complexity should produce the best usable draft, not unnecessary blocking.**
 
 - voice count is dynamic, not fixed to 2 or 4;
 - overlap and cross-measure sustain are normal;
 - ambiguous voice choices are hints/warnings;
 - same-onset mixed-duration notes remain reversible;
 - generated MusicXML survives independently if Score Editor is unavailable;
+- TAB generation is optional and cannot invalidate source notation;
 - hard failure is reserved for invalid/unrepresentable data or resource-safety problems;
 - teacher edits remain final musical authority.
 
@@ -50,6 +56,7 @@ VoiceCandidateAnalysis     NON_CANONICAL_HINT
 PolyphonicProjection       REVERSIBLE_HEURISTIC_PROJECTION
 MusicXML                   interchange/review projection
 Score Editor canonical doc teacher-edit authority after admitted import
+Guitar TAB                 optional derived performance/arrangement artifact
 ```
 
 ## Score Editor boundary
@@ -58,7 +65,11 @@ Generic integration consumes only the Score Editor public SDK contract:
 
 `packages/score-editor-sdk-v1/public.ts`
 
-The host injects a compatible SDK `1.0.0` object. This repository does not import Editor Core private packages. The bridge uses only public `document.openMusicXml`, revision guard, and `document.exportMusicXml` operations.
+The host injects a compatible SDK `1.0.0` object. This repository does not import Editor Core private packages.
+
+## Guitar TAB boundary
+
+S07 consumes the package-root contract of `musicxml-to-guitar-tab-engine` through host injection. The tested runtime is pinned in CI. Missing/blocked/failed TAB conversion returns `TAB_UNAVAILABLE` while preserving the source MusicXML.
 
 ## Development
 
