@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light dark" />
+  <title>ST Audio → MusicXML</title>
+  <meta name="description" content="MP3 veya WAV kaydını tarayıcı içinde analiz ederek MusicXML taslağına dönüştür." />
+  <link rel="stylesheet" href="./web/styles.css" />
+</head>
+<body>
+  <main class="shell">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">ST Improvisation to Score</p>
+        <h1>Ses kaydını <span>MusicXML</span>'e dönüştür.</h1>
+        <p class="lead">MP3 veya WAV dosyanı seç. Basic Pitch notaları çıkarır, ST motoru ritim ve polifoniyi MusicXML taslağına dönüştürür.</p>
+      </div>
+      <div class="privacy-badge" title="İlk MVP tarayıcı içinde çalışır.">
+        <span class="dot"></span>
+        Ses dosyası cihazından çıkmaz
+      </div>
+    </header>
+
+    <section class="panel upload-panel" aria-labelledby="uploadTitle">
+      <div class="section-heading">
+        <div>
+          <p class="step">1</p>
+          <h2 id="uploadTitle">Ses dosyası</h2>
+        </div>
+        <button id="resetButton" class="text-button" type="button" hidden>Temizle</button>
+      </div>
+
+      <label id="dropZone" class="drop-zone" for="audioInput">
+        <input id="audioInput" type="file" accept="audio/wav,audio/mpeg,audio/ogg,audio/flac,.wav,.mp3,.ogg,.flac" />
+        <div class="upload-icon" aria-hidden="true">↑</div>
+        <strong>MP3 / WAV dosyanı seç</strong>
+        <span>veya buraya sürükle</span>
+        <small>Solo gitar, piyano ve diğer tek-enstrüman kayıtları için.</small>
+      </label>
+
+      <div id="fileCard" class="file-card" hidden>
+        <div class="file-main">
+          <div class="file-icon">♪</div>
+          <div>
+            <strong id="fileName"></strong>
+            <p id="fileMeta"></p>
+          </div>
+        </div>
+        <audio id="audioPreview" controls preload="metadata"></audio>
+      </div>
+    </section>
+
+    <section class="panel settings-panel" aria-labelledby="settingsTitle">
+      <div class="section-heading">
+        <div>
+          <p class="step">2</p>
+          <h2 id="settingsTitle">Müzikal ayarlar</h2>
+        </div>
+        <span class="optional">İsteğe bağlı</span>
+      </div>
+
+      <div class="settings-grid">
+        <label class="field">
+          <span>Tempo</span>
+          <select id="tempoMode">
+            <option value="auto">Otomatik</option>
+            <option value="manual">BPM gir</option>
+          </select>
+        </label>
+
+        <label id="bpmField" class="field" hidden>
+          <span>BPM</span>
+          <input id="bpmInput" type="number" min="20" max="400" step="0.5" value="120" inputmode="decimal" />
+        </label>
+
+        <label class="field">
+          <span>Ölçü</span>
+          <select id="meterSelect">
+            <option value="4/4">4/4</option>
+            <option value="3/4">3/4</option>
+            <option value="2/4">2/4</option>
+            <option value="6/8">6/8</option>
+            <option value="12/8">12/8</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span>En küçük değer</span>
+          <select id="resolutionSelect">
+            <option value="8">Sekizlik</option>
+            <option value="16" selected>Onaltılık</option>
+            <option value="32">Otuzikilik</option>
+          </select>
+        </label>
+      </div>
+
+      <label class="check-row">
+        <input id="tripletInput" type="checkbox" checked />
+        <span>Üçlemeleri değerlendir</span>
+      </label>
+    </section>
+
+    <section class="action-section">
+      <button id="convertButton" class="primary-button" type="button" disabled>
+        <span id="convertButtonLabel">Notaya dönüştür</span>
+      </button>
+      <p class="action-note">Polifoni varsayılan olarak korunur. Belirsizlikler XML üretimini durdurmaz.</p>
+    </section>
+
+    <section id="progressPanel" class="panel progress-panel" hidden aria-live="polite">
+      <div class="progress-head">
+        <strong id="progressTitle">Hazırlanıyor…</strong>
+        <span id="progressPercent">0%</span>
+      </div>
+      <div class="progress-track"><div id="progressBar" class="progress-bar"></div></div>
+      <p id="progressDetail">Model hazırlanıyor.</p>
+    </section>
+
+    <section id="resultPanel" class="panel result-panel" hidden aria-live="polite">
+      <div class="result-title-row">
+        <div>
+          <p class="step done">✓</p>
+          <h2>MusicXML hazır</h2>
+        </div>
+        <span id="statusBadge" class="status-badge"></span>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat"><span>Nota olayı</span><strong id="noteCount">—</strong></div>
+        <div class="stat"><span>Voice</span><strong id="voiceCount">—</strong></div>
+        <div class="stat"><span>Tempo</span><strong id="tempoResult">—</strong></div>
+        <div class="stat"><span>Ölçü</span><strong id="meterResult">—</strong></div>
+      </div>
+
+      <div id="warningsBox" class="warnings" hidden>
+        <h3>Kontrol önerileri</h3>
+        <ul id="warningsList"></ul>
+      </div>
+
+      <div class="result-actions">
+        <button id="downloadButton" class="primary-button" type="button">MusicXML indir</button>
+        <button id="newFileButton" class="secondary-button" type="button">Yeni dosya</button>
+      </div>
+    </section>
+
+    <section id="errorPanel" class="panel error-panel" hidden role="alert">
+      <strong>Dönüştürme tamamlanamadı</strong>
+      <p id="errorMessage"></p>
+    </section>
+
+    <footer>
+      <span>ST Audio → MusicXML · Browser MVP</span>
+      <span>Basic Pitch TS + ST reconstruction engine</span>
+    </footer>
+  </main>
+
+  <script type="module" src="./web/app.js"></script>
+</body>
+</html>
