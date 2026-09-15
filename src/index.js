@@ -48,6 +48,14 @@ export {
 } from './adapters/scoreEditorSdk.js';
 
 export {
+  SCORE_EDITOR_TEACHER_EDIT_BRIDGE_VERSION,
+  SCORE_EDITOR_TEACHER_EDIT_SDK_VERSION,
+  appendScoreEditorTeacherEdit,
+  applyScoreEditorTeacherEdit,
+  normalizeScoreEditorTeacherEditReceipt,
+} from './adapters/scoreEditorTeacherEdit.js';
+
+export {
   SCORE_DRAFT_MUSICXML_MAX_DIVISIONS,
   SCORE_DRAFT_MUSICXML_VERSION,
   createScoreDraftMusicXmlManifest,

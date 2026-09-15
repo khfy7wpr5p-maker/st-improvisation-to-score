@@ -48,19 +48,21 @@ Append-only teacher authority, open-ended correction dimensions, supersession/re
 ## S06B — Teacher Calibration Metrics — COMPLETE
 Independent pitch/onset/duration/rhythm/voice quality metrics, denominator-aware correction rates and category-specific confidence calibration without one misleading combined score.
 
-## S06C — Teacher Overlay / Score Rebuild — CURRENT
+## S06C — Teacher Overlay / Score Rebuild — COMPLETE
+Reversible pitch/onset/duration/rhythm/voice/event overlays rebuild downstream score structure without mutating or re-quantizing the original machine draft.
 
-- apply active teacher corrections as a derived overlay while preserving the original machine draft;
-- rebuild from corrected quantized score state rather than re-quantizing corrected teacher timing;
-- support pitch, onset, duration, rhythm, voice, spurious-event deletion and missing-event insertion;
-- preserve teacher voice authority through polyphonic materialization;
-- preserve source score extent/pickup by default;
-- keep unsupported future correction dimensions in the ledger and expose non-blocking unapplied warnings;
-- make revert restore machine-derived state on the next rebuild;
-- keep corrected draft directly MusicXML/Score Editor compatible.
+## S06D — Score Editor Teacher Edit Receipts — CURRENT
 
-## S06D — Editor Correction Round Trip — NEXT
-Map Score Editor edit operations into the teacher ledger/overlay contract and prove edit -> ledger -> rebuild -> MusicXML round trip through the public SDK boundary.
+- consume public Score Editor SDK `1.0.0` authoring action receipts without importing private editor packages;
+- preserve action id, document/revision provenance and before/after evidence in the teacher ledger;
+- use explicit host-kept `sourceEventId` when available; never infer source identity from opaque editor IDs or target ordering;
+- let unmapped editor targets remain auditable/non-blocking until an identity bridge is available;
+- map public duration edits to teacher duration overlay while keeping accidental/tie/slur semantics as notation evidence;
+- prove real public `authoring.commitKeypad` -> host receipt -> ledger -> overlay rebuild -> MusicXML -> public SDK reopen/export;
+- keep `teacherWorkflow: false` limitation explicit rather than claiming an SDK edit journal that does not exist.
+
+## S06E — Source Identity Transport — NEXT
+Create a durable source-event identity bridge across generated MusicXML and Score Editor public boundaries, or adopt a future public `teacherWorkflow`/edit-journal capability when available. Do not rely on import order as identity.
 
 ## S07 — Optional Guitar TAB Handoff
 Reviewed MusicXML -> Guitar TAB. TAB failure must never invalidate the source score draft.
