@@ -1,7 +1,7 @@
 import { ImprovisationToScoreError } from '../contracts.js';
 import { buildScoreDraft } from '../scoreDraft.js';
 
-export const BEAT_TEMPO_ADAPTER_VERSION = '0.1.0';
+export const BEAT_TEMPO_ADAPTER_VERSION = '0.2.0';
 export const BEAT_TEMPO_SOURCE_AUTHORITY = 'SHADOW_EVIDENCE_ONLY';
 export const BEAT_TEMPO_MAX_BEATS = 100_000;
 export const BEAT_TEMPO_MAX_CANDIDATES = 32;
@@ -83,6 +83,19 @@ function beatStatistics(beatTimesSeconds) {
   });
 }
 
+function optionalBeatStrengths(providerResult, beatCount) {
+  if (providerResult.beatStrengths === undefined || providerResult.beatStrengths === null) return null;
+  if (!Array.isArray(providerResult.beatStrengths) || providerResult.beatStrengths.length !== beatCount) {
+    fail('INVALID_BEAT_TEMPO_CONTRACT', 'beatStrengths must be an array aligned one-to-one with beatTimesSeconds.', {
+      beatCount,
+      strengthCount: Array.isArray(providerResult.beatStrengths) ? providerResult.beatStrengths.length : null,
+    });
+  }
+  return Object.freeze(providerResult.beatStrengths.map((value, index) =>
+    finite(value, `beatStrengths[${index}]`, { min: 0, max: 1 })
+  ));
+}
+
 export function adaptBeatTempoProviderResult(providerResult, gateInput = {}) {
   if (providerResult === null || typeof providerResult !== 'object' || Array.isArray(providerResult)) {
     fail('INVALID_BEAT_TEMPO_RESULT', 'Beat/tempo provider result must be an object.');
@@ -113,6 +126,7 @@ export function adaptBeatTempoProviderResult(providerResult, gateInput = {}) {
       fail('INVALID_BEAT_TEMPO_CONTRACT', 'beatTimesSeconds must be strictly increasing.', { index });
     }
   }
+  const beatStrengths = optionalBeatStrengths(providerResult, beatTimesSeconds.length);
 
   if (!Array.isArray(providerResult.tempoCandidates)) fail('INVALID_BEAT_TEMPO_CONTRACT', 'tempoCandidates must be an array.');
   if (providerResult.tempoCandidates.length === 0 || providerResult.tempoCandidates.length > BEAT_TEMPO_MAX_CANDIDATES) {
@@ -151,13 +165,14 @@ export function adaptBeatTempoProviderResult(providerResult, gateInput = {}) {
     !halfDoubleAmbiguity;
 
   return Object.freeze({
-    schemaVersion: 'beat-tempo-evidence-v0.1',
+    schemaVersion: 'beat-tempo-evidence-v0.2',
     adapterVersion: BEAT_TEMPO_ADAPTER_VERSION,
     sourceAuthority: BEAT_TEMPO_SOURCE_AUTHORITY,
     providerId,
     sourceId,
     status: admitted ? 'AUTO_TEMPO_ADMITTED' : 'TEMPO_GUIDANCE_REQUIRED',
     beatTimesSeconds: Object.freeze(beatTimesSeconds),
+    beatStrengths,
     tempoCandidates: Object.freeze(tempoCandidates),
     topCandidate: top,
     statistics: stats,

@@ -24,19 +24,22 @@ Pinned real `st-score-editor-core` runtime builds and accepts/exports the genera
 ## S04A — Tempo Candidate Analysis — COMPLETE
 Bounded onset-derived BPM hypotheses, chord-jitter attack grouping, confidence and explicit half/double ambiguity. Candidate authority remains non-canonical.
 
-## S04B — Beat / Tempo Provider — CURRENT
+## S04B — Beat / Tempo Provider — COMPLETE
+Validated beat-provider evidence, independent beat-period BPM check, consistency/confidence gates and user-BPM precedence.
 
-- validate provider beat timelines and bounded tempo candidates;
-- recompute BPM independently from median beat period;
-- gate automatic BPM on beat count, provider confidence, beat-spacing consistency and BPM-period agreement;
-- reject near-equal half/double candidates from automatic admission;
-- keep user-supplied BPM above provider evidence;
-- degrade failed gates to `TEMPO_GUIDANCE_REQUIRED`, not hard blocking.
+## S04C — Meter Candidates — CURRENT
 
-## S04C — Meter Candidates — NEXT
-Meter/accent candidates and initial TempoMap/MeterMap projection; ambiguous meter stays provisional.
+- preserve optional beat-strength evidence from the beat provider;
+- rank bounded accent-cycle lengths and downbeat phases;
+- keep related cycle ambiguity explicit;
+- never infer a beat-unit denominator from accent strength alone;
+- allow a caller-supplied beat-unit hint to make a meter context usable;
+- keep meter output `NON_CANONICAL_METER_HINT` until teacher/provider confirmation.
 
-## S05 — Rubato / Expressive Time
+## S05A — Timing Map Foundation — NEXT
+Repository-owned provisional TempoMap/MeterMap contract with constant initial segments and explicit authority metadata.
+
+## S05B — Rubato / Expressive Time
 Local tempo segments, phrase-aware quantization and pickup inference without changing pitch-event identity.
 
 ## S06 — Teacher Calibration
