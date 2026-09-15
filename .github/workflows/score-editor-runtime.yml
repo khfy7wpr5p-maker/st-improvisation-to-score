@@ -1,0 +1,44 @@
+name: Score Editor Runtime Conformance
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  score-editor-sdk-runtime:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout transcription engine
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install transcription engine
+        run: npm install --ignore-scripts --no-audit --no-fund
+
+      - name: Checkout pinned Score Editor Core
+        uses: actions/checkout@v4
+        with:
+          repository: khfy7wpr5p-maker/st-score-editor-core
+          ref: e281d52881aaad0fade574a944251b12ea752038
+          path: .integration/st-score-editor-core
+
+      - name: Install Score Editor Core
+        working-directory: .integration/st-score-editor-core
+        run: npm install --ignore-scripts --no-audit --no-fund
+
+      - name: Build Score Editor public SDK
+        working-directory: .integration/st-score-editor-core
+        run: npm run build
+
+      - name: Run real public-SDK round trip
+        run: node scripts/scoreEditorRuntimeConformance.mjs .integration/st-score-editor-core/dist/packages/score-editor-sdk-v1/public.js
