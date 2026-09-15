@@ -1,6 +1,6 @@
 import { ImprovisationToScoreError, rational } from '../contracts.js';
 
-export const SCORE_DRAFT_MUSICXML_VERSION = '0.1.0';
+export const SCORE_DRAFT_MUSICXML_VERSION = '0.2.0';
 export const SCORE_DRAFT_MUSICXML_MAX_DIVISIONS = 16_384;
 
 function fail(code, message, details = {}) {
@@ -29,24 +29,11 @@ function compare(a, b) {
   return left < right ? -1 : left > right ? 1 : 0;
 }
 
-function add(a, b) {
-  return rational(
-    a.numerator * b.denominator + b.numerator * a.denominator,
-    a.denominator * b.denominator,
-  );
-}
-
 function escapeText(value) {
   return String(value)
     .replaceAll('&', '&amp;')
     .replaceAll('<', '&lt;')
     .replaceAll('>', '&gt;');
-}
-
-function escapeAttribute(value) {
-  return escapeText(value)
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&apos;');
 }
 
 function rationalKey(value) {
@@ -250,7 +237,6 @@ export function serializeScoreDraftToMusicXml(draft, options = {}) {
   const divisions = chooseDivisions(draft);
   const measureUnits = xmlUnits(draft.measureLengthQuarter, divisions, 'measureLengthQuarter');
   const partName = typeof options.partName === 'string' && options.partName.trim() ? options.partName.trim() : 'Transcription Draft';
-  const title = typeof options.title === 'string' && options.title.trim() ? options.title.trim() : 'Improvisation Transcription';
   const clef = normalizedClef(options);
   const voices = [...draft.polyphonicProjection.voices].sort((a, b) => a.voiceId.localeCompare(b.voiceId, undefined, { numeric: true }));
   const voiceNumber = new Map(voices.map((voice, index) => [voice.voiceId, index + 1]));
@@ -259,9 +245,6 @@ export function serializeScoreDraftToMusicXml(draft, options = {}) {
   const lines = [
     '<?xml version="1.0" encoding="UTF-8"?>',
     '<score-partwise version="4.0">',
-    '  <work>',
-    `    <work-title>${escapeText(title)}</work-title>`,
-    '  </work>',
     '  <part-list>',
     '    <score-part id="P1">',
     `      <part-name>${escapeText(partName)}</part-name>`,
