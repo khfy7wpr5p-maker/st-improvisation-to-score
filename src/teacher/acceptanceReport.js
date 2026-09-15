@@ -25,6 +25,10 @@ function optionalNonNegativeNumber(value, field) {
   return value;
 }
 
+function utf8ByteLength(value) {
+  return new TextEncoder().encode(value).length;
+}
+
 function summarizePipeline(pipelineResult) {
   if (pipelineResult == null) return null;
   if (typeof pipelineResult !== 'object' || Array.isArray(pipelineResult)) {
@@ -45,7 +49,7 @@ function summarizePipeline(pipelineResult) {
       ? draft.polyphonicProjection.voiceCount
       : null,
     musicXmlBytes: typeof pipelineResult.musicXml === 'string'
-      ? Buffer.byteLength(pipelineResult.musicXml)
+      ? utf8ByteLength(pipelineResult.musicXml)
       : null,
     editorOpened: pipelineResult.editor == null
       ? null
