@@ -79,4 +79,17 @@ A rights-clean polyphonic MP3 was generated in CI and passed through the real pi
 - Guitar TAB returned `TAB_READY` with `generateTab: true` and `export: true`;
 - source MusicXML remained preserved through the TAB handoff.
 
-Infrastructure acceptance is therefore complete. The next validation phase is teacher acceptance/quality testing with user-owned improvisation MP3/WAV recordings, recording corrections by pitch/onset/duration/rhythm/voice/meter rather than adding more infrastructure before evidence requires it.
+## S10A — Teacher Acceptance Reporting — CURRENT
+
+- one report joins pipeline evidence, teacher correction ledger and category-specific calibration;
+- pitch/onset/duration/rhythm/voice remain independent;
+- meter/tempo/notation corrections stay visible without being hidden inside one score;
+- correction burden is reported as workload, not mislabeled as accuracy;
+- no hardcoded product-wide acceptance threshold is introduced;
+- downstream Editor/TAB status remains descriptive and cannot redefine source-score quality.
+
+## S10B — User-Owned Recording Acceptance — WAITING FOR RECORDING EVIDENCE
+
+Run real user-owned improvisation MP3/WAV recordings through S08, review them in Score Editor, record teacher corrections, and compare repeated recordings before changing transcription policy or model/provider thresholds.
+
+The first S10B quality claim must be based on teacher-reviewed user audio. Synthetic CI audio is infrastructure evidence only.
