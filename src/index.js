@@ -15,7 +15,10 @@ export {
   secondsToQuarterNotes,
 } from './rhythmQuantizer.js';
 
-export { buildScoreDraft } from './scoreDraft.js';
+export {
+  buildScoreDraft,
+  buildScoreDraftFromQuantizedEvents,
+} from './scoreDraft.js';
 
 export {
   BASIC_PITCH_ADAPTER_VERSION,
@@ -138,3 +141,10 @@ export {
   TEACHER_CALIBRATION_METRICS_VERSION,
   buildTeacherCalibrationReport,
 } from './teacher/calibrationMetrics.js';
+
+export {
+  TEACHER_SCORE_OVERLAY_AUTHORITY,
+  TEACHER_SCORE_OVERLAY_MAX_APPLIED,
+  TEACHER_SCORE_OVERLAY_VERSION,
+  applyTeacherCorrectionOverlay,
+} from './teacher/scoreOverlay.js';
