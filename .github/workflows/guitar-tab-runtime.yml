@@ -36,5 +36,5 @@ jobs:
         working-directory: .integration/musicxml-to-guitar-tab-engine
         run: npm install --ignore-scripts --no-audit --no-fund
 
-      - name: Run real Guitar TAB handoff
-        run: node scripts/guitarTabRuntimeConformance.mjs .integration/musicxml-to-guitar-tab-engine/src/index.js
+      - name: Run real polyphonic Guitar TAB handoff
+        run: node scripts/guitarTabRuntimeConformance.mjs .integration/musicxml-to-guitar-tab-engine/src/app/musicXmlUploadRuntime.js
