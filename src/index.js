@@ -68,6 +68,13 @@ export {
 } from './polyphony/voiceCandidates.js';
 
 export {
+  METER_CANDIDATE_ANALYZER_VERSION,
+  METER_CANDIDATE_AUTHORITY,
+  METER_CANDIDATE_MAX_BEATS,
+  analyzeMeterCandidates,
+} from './timing/meterCandidates.js';
+
+export {
   TEMPO_CANDIDATE_ANALYZER_VERSION,
   TEMPO_CANDIDATE_AUTHORITY,
   TEMPO_CANDIDATE_MAX_EVENTS,
