@@ -58,12 +58,20 @@ Public authoring receipts feed teacher ledger/overlay rebuild without importing 
 Dedicated Score Editor handoff MusicXML carries safe per-segment source-note ids; public SDK revision-aware mappings resolve them back to stable repository `sourceEventId` values.
 
 ## S07 — Optional Guitar TAB Handoff — COMPLETE
+Capability-driven polyphonic TAB runtime is optional and downstream; source score authority survives TAB failure or review status.
 
-- consume reviewed MusicXML through a host-injected Guitar TAB capability;
-- prefer the pinned engine's capability-driven polyphonic application runtime, with the narrower package-root converter only as a fallback for compatible simple scores;
-- keep TAB derived and optional, never canonical score authority;
-- preserve source MusicXML when the TAB engine is absent, runtime-blocked or fails conversion;
-- preserve provisional/review-required TAB when the runtime reports `generateTab` capability instead of treating teacher review as a global lock;
-- isolate optional artifact failures to the affected artifact;
-- pin and continuously test the real `musicxml-to-guitar-tab-engine` runtime;
-- never let TAB failure invalidate source notation or Score Editor work.
+## S08 — End-to-End Audio Runner — CURRENT
+
+- invoke a host-injected real audio transcription provider without adding Basic Pitch to the core dependency graph;
+- pass the verified Basic Pitch result through the existing adapter into ScoreDraft and MusicXML;
+- optionally open the same draft through the public Score Editor source-identity bridge;
+- optionally hand the same source MusicXML to the Guitar TAB capability;
+- keep Editor/TAB failures local instead of changing source-score status.
+
+## S09 — Real MP3 Runtime Acceptance — CURRENT
+
+- generate a rights-clean MP3 fixture in CI;
+- run the pinned `basic-pitch==0.4.0` model through the existing Correction Engine provider boundary;
+- prove real MP3 -> note events -> ScoreDraft -> MusicXML -> Score Editor source identity;
+- prove the resulting source MusicXML reaches the pinned polyphonic Guitar TAB runtime without losing score authority;
+- after this gate is green, move to user-owned improvisation recordings for teacher acceptance/quality testing rather than more infrastructure work.
