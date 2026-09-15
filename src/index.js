@@ -8,8 +8,10 @@ export {
 } from './contracts.js';
 
 export {
+  finalizeQuantizedPerformance,
   quantizePerformance,
   quantizePerformanceEvent,
+  quantizePerformanceEventFromQuarterValues,
   secondsToQuarterNotes,
 } from './rhythmQuantizer.js';
 
@@ -89,4 +91,12 @@ export {
   createTimingMap,
   effectiveMeterAtQuarter,
   effectiveTempoAtQuarter,
+  elapsedSecondsToQuarterPosition,
+  quarterPositionToElapsedSeconds,
 } from './timing/timingMap.js';
+
+export {
+  TIMING_MAP_QUANTIZER_VERSION,
+  quantizePerformanceWithTimingMap,
+  validateTimingMapContextCompatibility,
+} from './timing/timingMapQuantizer.js';
