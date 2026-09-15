@@ -2,48 +2,47 @@
 
 Teacher-first transcription pipeline for turning a user-owned improvisation recording into an editable notation draft.
 
-## Product goal
+## Product flow
 
 ```text
 MP3/WAV/M4A/FLAC/OGG
-        -> transcription provider
+        -> existing Basic Pitch provider
+        -> Basic Pitch adapter
         -> RawPerformanceEvent[]
         -> musical-time mapping
         -> rhythm quantization
         -> measure/rest/chord reconstruction
         -> ScoreDraft
-        -> ST Score Editor
-        -> MusicXML
+        -> ST Score Editor (planned)
+        -> MusicXML (planned)
 ```
 
 MIDI is an optional diagnostic/export artifact, not the canonical bridge between audio and notation.
 
-## Stage 00 status
+## Current verified development surface
 
-Stage 00 establishes the repository-owned contracts and a deterministic first-pass rhythm/measure draft engine for **known tempo + known meter**. It deliberately does not claim automatic tempo detection, rubato tracking, full voice separation, or production Basic Pitch/Score Editor integration yet.
+- **S00 Foundation — merged:** repository-owned event/context contracts, rational notation timing, known-BPM/meter quantizer, chord grouping, explicit rests, review diagnostics and CI.
+- **S01 Basic Pitch Adapter — implemented on development branch:** maps the already-existing `st-omr-correction-engine` Basic Pitch provider result into repository-owned raw events while preserving audio/model provenance and source authority.
 
-Current core:
+The S01 adapter deliberately does not copy generated MIDI bytes into canonical transcription state. It preserves only generated-MIDI SHA-256 provenance; score drafting consumes Basic Pitch note events directly.
 
-- validated `RawPerformanceEvent` contract;
-- exact rational notation values after the external-seconds boundary;
-- known-BPM seconds -> quarter-note mapping;
-- regular-grid quantization with optional eighth-note triplet candidates;
-- chord grouping for equal snapped onsets;
-- measure placement and explicit monophonic gap rests;
-- overlap diagnostics instead of silently inventing voices;
-- deterministic tests and CI.
+## Safety / authority rules
 
-## Repository boundaries
+- original audio/provider provenance is immutable metadata;
+- provider seconds are evidence until quantized;
+- MIDI PPQ/ticks are not the canonical musical clock;
+- MusicXML divisions are not the internal clock;
+- provider confidence is never invented when unavailable;
+- unresolved polyphony produces `REVIEW_REQUIRED`, not an arbitrary voice assignment;
+- teacher correction in ST Score Editor will outrank generated draft decisions.
 
-Planned adapters consume only reviewed public/stable boundaries from the existing ST projects:
+## Existing ST projects reused by boundary
 
-- `st-omr-correction-engine`: Basic Pitch audio -> note-event provider boundary;
+- `st-omr-correction-engine`: Basic Pitch audio -> note-event provider;
 - `st-music-workstation`: Musical Time / TempoMap / MeterMap semantics;
 - `guitar-polyphony-lab-`: polyphonic timeline / sonority concepts;
-- `st-score-editor-core`: public SDK and ScoreDocument/MusicXML review/export surface;
+- `st-score-editor-core`: future public-SDK teacher review and MusicXML projection;
 - `musicxml-to-guitar-tab-engine`: optional downstream MusicXML -> Guitar TAB.
-
-The core never makes MIDI PPQ, MusicXML divisions, renderer coordinates, or provider timestamps an independent notation authority.
 
 ## Development
 
@@ -52,4 +51,8 @@ npm test
 npm run check
 ```
 
-See `docs/ARCHITECTURE.md` and `docs/ROADMAP.md`.
+See:
+
+- `docs/ARCHITECTURE.md`
+- `docs/ROADMAP.md`
+- `docs/S01_BASIC_PITCH_ADAPTER.md`
