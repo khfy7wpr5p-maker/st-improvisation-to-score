@@ -31,3 +31,9 @@ export {
   SONORITY_MAX_EVENTS,
   analyzeSonoritySpans,
 } from './polyphony/sonority.js';
+
+export {
+  VOICE_CANDIDATE_ANALYZER_VERSION,
+  VOICE_CANDIDATE_MAX_EVENTS,
+  analyzeVoiceCandidates,
+} from './polyphony/voiceCandidates.js';
