@@ -52,8 +52,12 @@ export function buildBrowserMusicXmlFromBasicPitch(input = {}) {
   });
 
   const score = buildScoreDraft(batch.rawEvents, context);
-  const musicXml = serializeScoreDraftToMusicXml(score.draft ?? score, input.musicXmlOptions ?? {});
-  const diagnostics = [...batch.diagnostics, ...(score.diagnostics ?? [])];
+  const musicXml = serializeScoreDraftToMusicXml(score, input.musicXmlOptions ?? {});
+  const diagnostics = [
+    ...batch.diagnostics,
+    ...(score.diagnostics ?? []),
+    ...(score.warnings ?? []),
+  ];
 
   if (requestedBpm == null && tempo.recommendedBpmHint == null) {
     diagnostics.push(warning(
@@ -77,10 +81,6 @@ export function buildBrowserMusicXmlFromBasicPitch(input = {}) {
     ));
   }
 
-  const voiceCount = score.draft?.polyphonicProjection?.voiceCount
-    ?? score.polyphonicProjection?.voiceCount
-    ?? null;
-
   return Object.freeze({
     schemaVersion: 'browser-musicxml-result-v0.1',
     pipelineVersion: BROWSER_MUSICXML_PIPELINE_VERSION,
@@ -93,7 +93,7 @@ export function buildBrowserMusicXmlFromBasicPitch(input = {}) {
     musicXml,
     summary: Object.freeze({
       detectedEventCount: batch.rawEvents.length,
-      voiceCount,
+      voiceCount: score.polyphonicProjection?.voiceCount ?? null,
       bpm,
       bpmSource: requestedBpm == null ? 'AUTO_PROVISIONAL' : 'USER',
       meter: `${meterNumerator}/${meterDenominator}`,
