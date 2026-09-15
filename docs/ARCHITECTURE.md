@@ -1,198 +1,95 @@
 # Architecture
 
-## 1. Product boundary
+## Product boundary
 
-`st-improvisation-to-score` owns the offline transformation from transcription events into an editable notation draft. It does not own OMR correction, score rendering, playback synthesis, Guitar TAB optimization, or realtime score following.
+`st-improvisation-to-score` owns offline audio-transcription evidence -> editable notation draft. It does not own OMR correction, score rendering, playback synthesis, Guitar TAB optimization, or realtime score following.
 
 ```text
-Audio file
-   |
-   v
-TranscriptionPort
-   |  RawPerformanceEvent[]
-   v
-PerformanceTimeMapper
-   |  musical positions + durations
-   v
-RhythmQuantizer
-   |  QuantizedEvent[]
-   v
-SonorityAnalyzer
-   |  active/attack/sustained spans
-   v
-VoiceCandidateAnalyzer
-   |  dynamic NON_CANONICAL_HINT voice strands
-   v
-PolyphonicMaterializer
-   |  REVERSIBLE_HEURISTIC_PROJECTION
-   |  per-voice measures / rests / tie candidates
-   v
-ScoreDraft
-   |
-   +--> ScoreEditorPort --> teacher review --> MusicXML
-   +--> MidiExportPort  --> optional diagnostic MIDI
-   +--> TabPort         --> optional Guitar TAB after MusicXML
+Audio
+ -> TranscriptionPort
+ -> RawPerformanceEvent[]
+ -> RhythmQuantizer
+ -> QuantizedEvent[]
+ -> SonorityAnalyzer
+ -> VoiceCandidateAnalyzer
+ -> PolyphonicMaterializer
+ -> ScoreDraft
+ -> MusicXmlProjection
+ -> ScoreEditorPublicBridge
+ -> teacher review/edit/export
 ```
 
-## 2. Authority rules
+## Authority rules
 
-1. Original audio identity/provenance is immutable metadata.
-2. Provider timestamps are evidence, not notation authority.
-3. MIDI PPQ/ticks are never the canonical musical clock.
-4. MusicXML divisions are interchange values, not the internal clock.
-5. After quantization, notation timing uses reduced rational quarter-note values.
-6. **Polyphony is expected input.** Overlap does not become an error merely because multiple notes are active.
-7. Voice analysis may produce a preferred strand plus alternatives, but these remain `NON_CANONICAL_HINT`.
-8. Polyphonic materialization is explicitly reversible and must not mutate the underlying `QuantizedEvent[]`.
-9. Cross-measure notes are represented as tie-candidate projection segments while the source event remains whole.
-10. Musical complexity should degrade to hints/provisional projection before it degrades to rejection.
-11. Teacher edits in ST Score Editor are authoritative over generated draft/projection decisions.
+1. Audio/provider provenance remains immutable metadata.
+2. MIDI is optional evidence/export, never notation authority.
+3. Quantized timing uses repository-owned reduced rational quarter-note values.
+4. Polyphony is expected input; overlap is not an error by itself.
+5. Voice candidates are `NON_CANONICAL_HINT`.
+6. Per-voice score materialization is `REVERSIBLE_HEURISTIC_PROJECTION` and cannot destroy source events.
+7. MusicXML is interchange/review projection, not a second internal authority.
+8. Once Score Editor admits MusicXML, its canonical score/notation pair and history own teacher edits.
+9. Optional editor capabilities degrade locally; they must not invalidate a safe standalone transcription artifact.
+10. Hard failure is reserved for structurally invalid/unrepresentable data or resource-safety violations.
 
-## 3. Existing ST components to reuse
+## Score Editor public boundary
 
-### Transcription adapter
+The only admitted external Editor Core entry is:
 
-Source: `st-omr-correction-engine/providers/basic-pitch`.
+`packages/score-editor-sdk-v1/public.ts`
 
-Reuse the existing provider boundary for MP3/WAV/M4A/FLAC/OGG -> note events. Do not move correction-engine semantic authority into this repository. The adapter maps provider output into `RawPerformanceEvent`.
+The current bridge requires SDK contract `1.0.0` and does not import Editor Core implementation packages. A host supplies the SDK object. The bridge uses:
 
-### Musical-time adapter
+- `sdk.version`;
+- `sdk.supports('document')` when available;
+- `sdk.document.openMusicXml(...)`;
+- `sdk.getRevisionGuard()`;
+- `sdk.document.exportMusicXml(...)`.
 
-Source semantics: `st-music-workstation` Musical Time, TempoMap, MeterMap.
+Private controller/session/browser-app/package paths are outside this repository's integration contract.
 
-External seconds/ticks are converted at a boundary into ST-owned musical positions. The current constant-tempo subset is an initial operating mode, not a permanent product restriction.
+## MusicXML projection
 
-### Polyphony adapter
+`serializeScoreDraftToMusicXml()` maps the reversible polyphonic projection to bounded MusicXML 4.0:
 
-Source semantics: `guitar-polyphony-lab-` half-open interval / sonority model.
+- one part by default, configurable part/title/clef metadata;
+- meter from transcription context;
+- deterministic rational `divisions` within a resource envelope;
+- multiple voice streams separated with `backup`;
+- same-onset voice events emitted as chord members;
+- projected cross-measure note segments emit tie start/stop semantics;
+- empty drafts remain serializable as a rest measure.
 
-The repository adapts deterministic `[onset,end)` semantics into rational notation time, then adds transcription-specific dynamic voice hints and reversible projection. There is no fixed musical limit such as exactly two or four voices.
+Pitch spelling is intentionally provisional and deterministic. MIDI pitch is rendered with a simple sharp-based spelling so the pipeline remains usable; later key/enharmonic intelligence or teacher correction may replace it.
 
-### Score Editor adapter
+A sidecar manifest preserves `sourceEventId -> projected segments` so MusicXML serialization never erases reconstruction provenance.
 
-Source: `st-score-editor-core` public SDK only.
+## Graceful degradation
 
-The integration must use the versioned public SDK rather than editor-private packages. Generated confidence, alternative voice candidates, projection warnings, and tie provenance remain metadata unless explicitly accepted into canonical editor state.
-
-## 4. Core contracts
-
-### RawPerformanceEvent
+The Score Editor is an editing surface, not a prerequisite for owning the transcription result.
 
 ```text
-eventId
-midiPitch
-onsetSeconds
-offsetSeconds
-confidence?
-amplitude?
-sourceEventId?
+ScoreDraft -> MusicXML + manifest
+                    |
+                    +--> editor opens: review/edit/export
+                    |
+                    +--> editor unavailable/rejects: keep MusicXML + manifest
 ```
 
-### QuantizedEvent
+SDK absence, version mismatch, unavailable document capability, or an import error returns a typed bridge failure while retaining MusicXML whenever serialization itself was safe.
+
+## Development sequence
 
 ```text
-eventId
-midiPitch
-onsetQuarter       Rational
-durationQuarter    Rational
-source timing/provenance
-```
-
-### VoiceCandidateAnalysis
-
-```text
-policy              POLYPHONY_IS_DEFAULT
-voiceCountHint       dynamic
-assignments[]
-  attackGroupId
-  eventIds[]
-  preferredVoiceId
-  candidates[]
-  activeVoiceIds[]
-  ambiguous
-authority            NON_CANONICAL_HINT
-```
-
-### PolyphonicScoreProjection
-
-```text
-authority            REVERSIBLE_HEURISTIC_PROJECTION
-voices[]
-  voiceId
-  measures[]
-    notes[]           projected note/tie segments
-    rests[]           VOICE_GAP
-segments[]
-  sourceEventId
-  measureIndex
-  onsetInMeasure
-  durationQuarter
-  tieFromPrevious
-  tieToNext
-warnings[]
-```
-
-Every projected segment retains `sourceEventId`, source onset and source duration so projection can be regenerated or discarded without losing transcription evidence.
-
-### ScoreDraft
-
-```text
-status
-polyphonyPolicy
-context
-quantizedEvents[]
-polyphony
-voiceCandidates
-polyphonicProjection
-measures[]            attack/global-silence view
-diagnostics[]
-warnings[]
-```
-
-## 5. Rhythm policy
-
-The first-pass engine currently accepts supplied BPM and meter. These values make the initial personal-use workflow predictable; they are not intended as mandatory permanent constraints. Automatic tempo/meter and rubato stages will feed the same rational musical-time model.
-
-Current quantization grids are implementation defaults, not definitions of valid music. Later stages may widen tuplets and adaptive rhythmic candidates without changing event identity.
-
-## 6. Polyphony policy
-
-- sustained notes remain active while later attacks occur;
-- later attacks may dynamically create additional voice strands;
-- ended strands are ranked as continuation candidates using register/pitch continuity and temporal gap;
-- same-onset notes are initially chord-like because audio alone may not prove a voice split;
-- mixed-duration same-onset events retain split hints;
-- ambiguous continuation choices preserve alternatives rather than stopping output;
-- per-voice rests are created only after voice projection;
-- notes may cross any number of barlines and are split into reversible tie-candidate segments;
-- the source `QuantizedEvent` is never chopped up or overwritten by projection.
-
-## 7. Failure / review behavior
-
-Normal musical complexity must not trigger hard failure. Polyphonic overlap and cross-measure sustain are normal.
-
-Warnings are appropriate for heuristic uncertainty such as ambiguous voice continuation or mixed-duration chord interpretation. They do not disable rendering/editing/export preparation.
-
-Hard failure is reserved for:
-
-- structurally invalid/unreadable event contracts;
-- impossible numeric/timing values;
-- pathological resource usage outside safety envelopes;
-- internal contract mismatch that would otherwise invent or lose source events.
-
-`PASS` / future `REVIEW_REQUIRED` document states must remain separate from capabilities.
-
-## 8. Planned stages
-
-```text
-S00 Foundation               contracts + known-tempo quantizer + draft builder
-S01 Basic Pitch Adapter      real audio -> RawPerformanceEvent
-S02A Sonority                rational active-note spans
-S02B Voice Hints             polyphony-default dynamic strand candidates
-S02C Materialization         reversible voices/rests/tie projection
-S03 Score Editor Bridge      projection -> public editor SDK / MusicXML review
-S04 Automatic Beat/Tempo     beat tracking + tempo-map inference
-S05 Rubato                   local tempo curve / expressive timing
-S06 Teacher Calibration      confidence + correction feedback corpus
-S07 Guitar TAB downstream    optional reviewed MusicXML -> TAB handoff
+S00 Foundation
+S01 Basic Pitch adapter
+S02A Sonority
+S02B Dynamic voice hints
+S02C Reversible polyphonic materialization
+S03A MusicXML + public SDK bridge
+S03B Real public-SDK runtime conformance
+S04 Automatic beat/tempo
+S05 Rubato
+S06 Teacher calibration
+S07 Optional TAB downstream
 ```

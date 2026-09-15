@@ -27,6 +27,20 @@ export {
 } from './adapters/basicPitch.js';
 
 export {
+  SCORE_EDITOR_SDK_BRIDGE_VERSION,
+  SCORE_EDITOR_SDK_REQUIRED_VERSION,
+  exportMusicXmlFromEditor,
+  openScoreDraftInEditor,
+} from './adapters/scoreEditorSdk.js';
+
+export {
+  SCORE_DRAFT_MUSICXML_MAX_DIVISIONS,
+  SCORE_DRAFT_MUSICXML_VERSION,
+  createScoreDraftMusicXmlManifest,
+  serializeScoreDraftToMusicXml,
+} from './export/musicXml.js';
+
+export {
   POLYPHONIC_MATERIALIZER_MAX_SEGMENTS,
   POLYPHONIC_MATERIALIZER_VERSION,
   materializePolyphonicScore,
