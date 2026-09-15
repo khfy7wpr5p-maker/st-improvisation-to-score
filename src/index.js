@@ -119,3 +119,15 @@ export {
   quantizePerformanceWithTimingMap,
   validateTimingMapContextCompatibility,
 } from './timing/timingMapQuantizer.js';
+
+export {
+  TEACHER_CORRECTION_AUTHORITY,
+  TEACHER_CORRECTION_LEDGER_VERSION,
+  TEACHER_CORRECTION_MAX_ENTRIES,
+  TEACHER_CORRECTION_MAX_VALUE_DEPTH,
+  appendTeacherCorrection,
+  createTeacherCorrectionLedger,
+  revertTeacherCorrection,
+  summarizeTeacherCorrections,
+  teacherCorrectionCategory,
+} from './teacher/correctionLedger.js';
