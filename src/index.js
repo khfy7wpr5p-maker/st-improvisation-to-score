@@ -84,6 +84,16 @@ export {
 } from './timing/tempoCandidates.js';
 
 export {
+  LOCAL_TEMPO_MAX_BEATS,
+  LOCAL_TEMPO_MAX_CHANGES,
+  LOCAL_TEMPO_SEGMENT_ANALYZER_VERSION,
+  LOCAL_TEMPO_SEGMENT_AUTHORITY,
+  analyzeLocalTempoSegments,
+  buildScoreDraftFromLocalTempoEvidence,
+  createLocalTempoTimingMap,
+} from './timing/localTempoSegments.js';
+
+export {
   TIMING_MAP_AUTHORITY,
   TIMING_MAP_MAX_CHANGES,
   TIMING_MAP_VERSION,

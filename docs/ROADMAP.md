@@ -33,20 +33,21 @@ Bounded beat-accent cycle ranking, downbeat phase hints and explicit denominator
 ## S05A — Timing Map Foundation — COMPLETE
 Repository-owned provisional tempo/meter change maps with strict ordering, origin invariants and source authority metadata.
 
-## S05B — Piecewise Tempo Mapping — CURRENT
+## S05B — Piecewise Tempo Mapping — COMPLETE
+Boundary-aware quarter/seconds conversion, independent onset/offset mapping across tempo changes and ScoreDraft support for multi-segment tempo maps.
 
-- integrate ordered tempo segments into elapsed-seconds conversion;
-- provide exact boundary-aware quarter -> seconds and seconds -> quarter mapping;
-- map note onset and offset independently across tempo changes;
-- quantize mapped performance without changing pitch-event identity;
-- allow ScoreDraft to consume multiple tempo segments;
-- require timing-map origin to agree with transcription context;
-- fail explicitly on changing-meter ScoreDraft projection until the measure builder supports it.
+## S05C — Local Tempo Segment Evidence — CURRENT
 
-## S05C — Local Tempo Segment Evidence — NEXT
-Generate bounded local tempo-segment proposals from stronger beat evidence, with continuity and stability gates. Do not infer expressive timing from note events alone when beat evidence is insufficient.
+- analyze provider beat timelines in overlapping local windows;
+- preserve half/double and low-confidence uncertainty instead of hard blocking;
+- derive bounded local tempo change proposals from stable regional beat evidence;
+- fit admitted local segments to observed beat endpoints;
+- keep user-entered BPM higher authority than automatic evidence;
+- if local evidence is weak, still emit an editable provisional draft from the best tempo candidate;
+- preserve original pitch identity and source seconds;
+- keep meter fixed in this stage; variable measure boundaries remain S05D.
 
-## S05D — Changing Meter / Pickup Projection
+## S05D — Changing Meter / Pickup Projection — NEXT
 Materialize meter changes and pickup structure into variable measure boundaries without discarding the provisional timing map.
 
 ## S06 — Teacher Calibration
