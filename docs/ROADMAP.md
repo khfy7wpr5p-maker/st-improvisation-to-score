@@ -42,21 +42,21 @@ Regional beat-window analysis, local tempo changes fitted to observed beat endpo
 ## S05D — Changing Meter / Pickup Projection — COMPLETE
 Variable measure topology, off-barline meter-change transition measures, explicit pickup materialization, variable-boundary ties/rests and MusicXML time changes without global blocking.
 
-## S06A — Teacher Correction Ledger — CURRENT
+## S06A — Teacher Correction Ledger — COMPLETE
+Append-only teacher authority, open-ended correction dimensions, supersession/revert history and score-level missing-event evidence without destructive source rewrites.
 
-- append-only `TEACHER_CONFIRMED` correction evidence;
-- preserve original machine/audio evidence instead of overwriting it;
-- correction targets may be source events, projected segments, measures, score-level objects or future target kinds;
-- keep correction dimensions open-ended while classifying core pitch/onset/duration/rhythm/voice categories for analytics;
-- support supersession and explicit revert without deleting history;
-- support missing-event additions as score-level teacher evidence;
-- keep correction application/writeback separate from immutable audit history.
+## S06B — Teacher Calibration Metrics — CURRENT
 
-## S06B — Teacher Calibration Metrics — NEXT
-Compute separate correction/error metrics for pitch, onset, duration, rhythm and voice, plus coverage and confidence calibration. Do not collapse independent failure modes into one score.
+- report pitch, onset, duration, rhythm and voice separately;
+- count distinct active corrected targets rather than raw edit clicks;
+- calculate correction rate only when a teacher-reviewed denominator exists;
+- withhold misleading rates when denominator evidence is inconsistent;
+- calibrate confidence per category with empirical accuracy, Brier score, ECE and bins;
+- preserve future uncategorized observations without mixing them into core metrics;
+- intentionally do not emit one combined accuracy score.
 
-## S06C — Teacher Overlay / Score Rebuild
-Apply active teacher corrections as a reversible overlay to editable score state while preserving source-event identity and audit history.
+## S06C — Teacher Overlay / Score Rebuild — NEXT
+Apply active teacher corrections as a reversible overlay to editable score state while preserving source-event identity, correction ledger history and the original machine draft.
 
 ## S07 — Optional Guitar TAB Handoff
 Reviewed MusicXML -> Guitar TAB. TAB failure must never invalidate the source score draft.
