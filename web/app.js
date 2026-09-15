@@ -235,7 +235,7 @@ async function convert() {
       meterDenominator,
       smallestNoteDenominator: Number(resolutionSelect.value),
       allowTriplets: tripletInput.checked,
-      musicXmlOptions: { title: sanitizeStem(selectedFile.name) },
+      musicXmlOptions: { partName: sanitizeStem(selectedFile.name) },
     });
 
     setProgress(100, 'MusicXML hazır', 'Dosya cihazınızda üretildi.');
