@@ -22,34 +22,32 @@
 - rational half-open note intervals;
 - deterministic boundary-to-boundary sonority spans;
 - active/attack/sustained event identities;
-- `MONOPHONIC`, `CHORD_ATTACK`, `SUSTAINED_OVERLAP`, `SUSTAINED_SONORITY` classifications;
-- ScoreDraft exposes sonority evidence.
+- `MONOPHONIC`, `CHORD_ATTACK`, `SUSTAINED_OVERLAP`, `SUSTAINED_SONORITY` classifications.
 
-## S02B — Polyphony-Default Voice Hints — CURRENT
+## S02B — Polyphony-Default Voice Hints — COMPLETE
 
-- polyphonic overlap is ordinary musical input and no longer a review error by itself;
+- polyphonic overlap is ordinary musical input;
 - dynamic voice-strand count rather than fixed 2/4-voice limits;
-- sustained-note continuity keeps active voices unavailable to new attacks;
-- ended strands are ranked by pitch/register continuity and temporal gap;
-- preferred voice plus all eligible alternatives are retained as `NON_CANONICAL_HINT`;
-- near-equal candidates produce ambiguity metadata, not a blocked/rejected draft;
-- same-onset mixed-duration chords get a split hint without forced separation.
+- ended strands ranked by register continuity and temporal gap;
+- preferred voice plus all eligible alternatives retained as `NON_CANONICAL_HINT`;
+- near-equal candidates produce ambiguity metadata, not blocked/rejected drafts.
 
-## S02C — Polyphonic Score Materialization — NEXT
+## S02C — Polyphonic Materialization — CURRENT
 
-- convert voice hints into reversible score-draft voice projections;
-- per-voice rest reconstruction after voice projection, not before;
-- cross-measure split/tie candidates;
-- preserve original quantized events independently from projected voices;
-- allow teacher correction to replace any heuristic assignment.
+- reversible `REVERSIBLE_HEURISTIC_PROJECTION` over untouched quantized events;
+- per-voice measure timelines;
+- per-voice gap rests after voice projection;
+- measure-crossing notes split into tie-candidate segments automatically;
+- ambiguous voice choices and mixed-duration chord splits remain warnings/hints rather than blockers;
+- global-silence detection accounts for notes sustaining across barlines.
 
-## S03 — ST Score Editor Bridge
+## S03 — ST Score Editor Bridge — NEXT
 
-- integrate only through `st-score-editor-core` public SDK;
-- map ScoreDraft into admitted score/editing surface;
-- preserve generated diagnostics and voice alternatives as review metadata;
+- fresh-read `st-score-editor-core` public SDK contract;
+- map reversible projection into admitted editor score/document structures;
+- preserve voice alternatives, source-event identity and tie provenance as review metadata;
 - teacher correction and exact undo remain editor authority;
-- export admitted MusicXML.
+- export admitted MusicXML without requiring a perfect transcription first.
 
 ## S04 — Automatic Beat / Tempo
 

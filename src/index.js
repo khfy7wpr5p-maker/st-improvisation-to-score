@@ -27,6 +27,12 @@ export {
 } from './adapters/basicPitch.js';
 
 export {
+  POLYPHONIC_MATERIALIZER_MAX_SEGMENTS,
+  POLYPHONIC_MATERIALIZER_VERSION,
+  materializePolyphonicScore,
+} from './polyphony/materialize.js';
+
+export {
   SONORITY_ANALYZER_VERSION,
   SONORITY_MAX_EVENTS,
   analyzeSonoritySpans,

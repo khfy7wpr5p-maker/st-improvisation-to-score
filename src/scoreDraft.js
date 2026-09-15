@@ -5,6 +5,7 @@ import {
   rational,
   rationalToNumber,
 } from './contracts.js';
+import { materializePolyphonicScore } from './polyphony/materialize.js';
 import { analyzeSonoritySpans } from './polyphony/sonority.js';
 import { analyzeVoiceCandidates } from './polyphony/voiceCandidates.js';
 import { quantizePerformance } from './rhythmQuantizer.js';
@@ -25,7 +26,15 @@ function compare(a, b) {
   return a.numerator * b.denominator - b.numerator * a.denominator;
 }
 
-function maxRational(values) {
+function minRational(a, b) {
+  return compare(a, b) <= 0 ? a : b;
+}
+
+function maxRational(a, b) {
+  return compare(a, b) >= 0 ? a : b;
+}
+
+function maxRationalList(values) {
   return values.reduce((best, value) => compare(value, best) > 0 ? value : best);
 }
 
@@ -39,45 +48,69 @@ function groupSameOnset(events) {
   return groups;
 }
 
-function diagnostic(code, message, details = {}) {
-  return Object.freeze({ code, message, details: Object.freeze({ ...details }) });
+function globalSilenceRests(index, events, measureLength) {
+  const measureStart = scale(measureLength, index);
+  const measureEnd = add(measureStart, measureLength);
+  const coverage = [];
+
+  for (const event of events) {
+    const eventEnd = add(event.onsetQuarter, event.durationQuarter);
+    const start = maxRational(event.onsetQuarter, measureStart);
+    const end = minRational(eventEnd, measureEnd);
+    if (compare(end, start) <= 0) continue;
+    coverage.push({
+      start: subtract(start, measureStart),
+      end: subtract(end, measureStart),
+    });
+  }
+
+  coverage.sort((a, b) => compare(a.start, b.start) || compare(a.end, b.end));
+  const rests = [];
+  let cursor = rational(0, 1);
+
+  for (const interval of coverage) {
+    if (compare(interval.start, cursor) > 0) {
+      rests.push(Object.freeze({
+        type: 'rest',
+        scope: 'GLOBAL_SILENCE',
+        onsetQuarter: cursor,
+        durationQuarter: subtract(interval.start, cursor),
+      }));
+    }
+    cursor = maxRational(cursor, interval.end);
+  }
+
+  if (compare(cursor, measureLength) < 0) {
+    rests.push(Object.freeze({
+      type: 'rest',
+      scope: 'GLOBAL_SILENCE',
+      onsetQuarter: cursor,
+      durationQuarter: subtract(measureLength, cursor),
+    }));
+  }
+
+  return rests;
 }
 
 function buildMeasure(index, events, measureLength) {
   const measureStart = scale(measureLength, index);
   const measureEnd = add(measureStart, measureLength);
-  const localEvents = events
+  const localAttacks = events
     .filter((event) => compare(event.onsetQuarter, measureStart) >= 0 && compare(event.onsetQuarter, measureEnd) < 0)
     .map((event) => Object.freeze({ ...event, onsetInMeasure: subtract(event.onsetQuarter, measureStart) }));
-  const groups = groupSameOnset(localEvents);
-  const output = [];
-  const diagnostics = [];
-  let cursor = rational(0, 1);
+  const groups = groupSameOnset(localAttacks);
+  const attacks = [];
 
   for (const group of groups) {
     const localOnset = group.events[0].onsetInMeasure;
-    if (compare(localOnset, cursor) > 0) {
-      output.push(Object.freeze({
-        type: 'rest',
-        scope: 'GLOBAL_SILENCE',
-        onsetQuarter: cursor,
-        durationQuarter: subtract(localOnset, cursor),
-      }));
-    }
-
-    const groupDuration = maxRational(group.events.map((event) => event.durationQuarter));
-    const absoluteEnd = add(group.events[0].onsetQuarter, groupDuration);
-    if (compare(absoluteEnd, measureEnd) > 0) {
-      diagnostics.push(diagnostic(
-        'CROSS_MEASURE_NOTE_REQUIRES_TIE_RECONSTRUCTION',
-        'A quantized note crosses the measure boundary; the draft is preserved and a later stage may materialize the tie/split.',
-        { measureIndex: index, eventIds: group.events.map((event) => event.eventId) },
-      ));
-    }
+    const groupDuration = maxRationalList(group.events.map((event) => event.durationQuarter));
+    const crossesMeasureBoundary = group.events.some((event) =>
+      compare(add(event.onsetQuarter, event.durationQuarter), measureEnd) > 0
+    );
 
     if (group.events.length === 1) {
       const event = group.events[0];
-      output.push(Object.freeze({
+      attacks.push(Object.freeze({
         type: 'note',
         eventId: event.eventId,
         midiPitch: event.midiPitch,
@@ -86,12 +119,14 @@ function buildMeasure(index, events, measureLength) {
         confidence: event.confidence,
         sourceOnsetSeconds: event.sourceOnsetSeconds,
         sourceDurationSeconds: event.sourceDurationSeconds,
+        crossesMeasureBoundary,
       }));
     } else {
-      output.push(Object.freeze({
+      attacks.push(Object.freeze({
         type: 'chord',
         onsetQuarter: localOnset,
         durationQuarter: groupDuration,
+        crossesMeasureBoundary,
         notes: Object.freeze(group.events.map((event) => Object.freeze({
           eventId: event.eventId,
           midiPitch: event.midiPitch,
@@ -100,25 +135,21 @@ function buildMeasure(index, events, measureLength) {
         }))),
       }));
     }
-
-    const localEnd = add(localOnset, groupDuration);
-    if (compare(localEnd, cursor) > 0) cursor = localEnd;
   }
 
-  if (compare(cursor, measureLength) < 0) {
-    output.push(Object.freeze({
-      type: 'rest',
-      scope: 'GLOBAL_SILENCE',
-      onsetQuarter: cursor,
-      durationQuarter: subtract(measureLength, cursor),
-    }));
-  }
+  const rests = globalSilenceRests(index, events, measureLength);
+  const output = [...attacks, ...rests].sort((a, b) => {
+    const onsetCompare = compare(a.onsetQuarter, b.onsetQuarter);
+    if (onsetCompare !== 0) return onsetCompare;
+    if (a.type === b.type) return 0;
+    return a.type === 'rest' ? 1 : -1;
+  });
 
   return Object.freeze({
     measureIndex: index,
     events: Object.freeze(output),
-    diagnostics: Object.freeze(diagnostics),
-    reviewRequired: diagnostics.length > 0,
+    diagnostics: Object.freeze([]),
+    reviewRequired: false,
   });
 }
 
@@ -127,6 +158,7 @@ export function buildScoreDraft(rawEvents, contextInput) {
   const quantized = quantizePerformance(rawEvents, context);
   const polyphony = analyzeSonoritySpans(quantized);
   const voiceCandidates = analyzeVoiceCandidates(quantized);
+  const polyphonicProjection = materializePolyphonicScore(quantized, voiceCandidates, context);
   const measureLength = measureLengthQuarter(context);
   const measureLengthNumber = rationalToNumber(measureLength);
   if (measureLengthNumber <= 0) throw new ImprovisationToScoreError('INVALID_MEASURE_LENGTH', 'Derived measure length must be positive.');
@@ -137,23 +169,22 @@ export function buildScoreDraft(rawEvents, contextInput) {
   }
   const measureCount = Math.max(1, Math.ceil(maxEnd / measureLengthNumber));
   const measures = [];
-  const diagnostics = [];
   for (let index = 0; index < measureCount; index += 1) {
-    const measure = buildMeasure(index, quantized, measureLength);
-    measures.push(measure);
-    diagnostics.push(...measure.diagnostics);
+    measures.push(buildMeasure(index, quantized, measureLength));
   }
 
   return Object.freeze({
-    schemaVersion: 'score-draft-v0.3',
-    status: diagnostics.length === 0 ? 'PASS' : 'REVIEW_REQUIRED',
+    schemaVersion: 'score-draft-v0.4',
+    status: 'PASS',
     polyphonyPolicy: 'POLYPHONY_IS_DEFAULT',
     context,
     measureLengthQuarter: measureLength,
     quantizedEvents: quantized,
     polyphony,
     voiceCandidates,
+    polyphonicProjection,
     measures: Object.freeze(measures),
-    diagnostics: Object.freeze(diagnostics),
+    diagnostics: Object.freeze([]),
+    warnings: polyphonicProjection.warnings,
   });
 }

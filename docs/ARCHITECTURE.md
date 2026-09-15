@@ -21,10 +21,11 @@ SonorityAnalyzer
    |  active/attack/sustained spans
    v
 VoiceCandidateAnalyzer
-   |  dynamic non-canonical voice hints
+   |  dynamic NON_CANONICAL_HINT voice strands
    v
-ScoreDraftBuilder
-   |  measures / chords / global silence / diagnostics
+PolyphonicMaterializer
+   |  REVERSIBLE_HEURISTIC_PROJECTION
+   |  per-voice measures / rests / tie candidates
    v
 ScoreDraft
    |
@@ -41,9 +42,11 @@ ScoreDraft
 4. MusicXML divisions are interchange values, not the internal clock.
 5. After quantization, notation timing uses reduced rational quarter-note values.
 6. **Polyphony is expected input.** Overlap does not become an error merely because multiple notes are active.
-7. Voice analysis may produce a preferred strand plus alternatives, but these remain `NON_CANONICAL_HINT` until teacher/editor confirmation.
-8. Musical complexity should degrade to provisional output or hints before it degrades to rejection.
-9. Teacher edits in ST Score Editor are authoritative over the generated draft.
+7. Voice analysis may produce a preferred strand plus alternatives, but these remain `NON_CANONICAL_HINT`.
+8. Polyphonic materialization is explicitly reversible and must not mutate the underlying `QuantizedEvent[]`.
+9. Cross-measure notes are represented as tie-candidate projection segments while the source event remains whole.
+10. Musical complexity should degrade to hints/provisional projection before it degrades to rejection.
+11. Teacher edits in ST Score Editor are authoritative over generated draft/projection decisions.
 
 ## 3. Existing ST components to reuse
 
@@ -57,19 +60,19 @@ Reuse the existing provider boundary for MP3/WAV/M4A/FLAC/OGG -> note events. Do
 
 Source semantics: `st-music-workstation` Musical Time, TempoMap, MeterMap.
 
-The repository adopts the same architectural rule: external seconds/ticks are converted at a boundary into an ST-owned musical position. The current constant-tempo subset remains lightweight. Later tempo-map adapters may widen the timing model without changing event identity.
+External seconds/ticks are converted at a boundary into ST-owned musical positions. The current constant-tempo subset is an initial operating mode, not a permanent product restriction.
 
 ### Polyphony adapter
 
 Source semantics: `guitar-polyphony-lab-` half-open interval / sonority model.
 
-The repository adapts the deterministic `[onset,end)` active-note semantics into rational notation time. It then adds its own transcription-specific voice-hint layer. There is no fixed musical limit such as exactly two or four voices; strand count grows from the observed overlap structure.
+The repository adapts deterministic `[onset,end)` semantics into rational notation time, then adds transcription-specific dynamic voice hints and reversible projection. There is no fixed musical limit such as exactly two or four voices.
 
 ### Score Editor adapter
 
 Source: `st-score-editor-core` public SDK only.
 
-The integration must use the versioned public SDK rather than editor-private packages. The editor receives a generated score draft / MusicXML projection for teacher review. Generated confidence, voice alternatives, and diagnostics remain metadata unless explicitly accepted into canonical editor state.
+The integration must use the versioned public SDK rather than editor-private packages. Generated confidence, alternative voice candidates, projection warnings, and tie provenance remain metadata unless explicitly accepted into canonical editor state.
 
 ## 4. Core contracts
 
@@ -77,11 +80,11 @@ The integration must use the versioned public SDK rather than editor-private pac
 
 ```text
 eventId
-midiPitch          0..127
-onsetSeconds       finite >= 0
-offsetSeconds      finite > onset
-confidence?        0..1
-amplitude?         0..1
+midiPitch
+onsetSeconds
+offsetSeconds
+confidence?
+amplitude?
 sourceEventId?
 ```
 
@@ -90,12 +93,9 @@ sourceEventId?
 ```text
 eventId
 midiPitch
-sourceOnsetSeconds
-sourceDurationSeconds
 onsetQuarter       Rational
 durationQuarter    Rational
-confidence?
-quantizationErrorQuarter
+source timing/provenance
 ```
 
 ### VoiceCandidateAnalysis
@@ -107,14 +107,32 @@ assignments[]
   attackGroupId
   eventIds[]
   preferredVoiceId
-  candidates[]       eligible prior strands + scores
+  candidates[]
   activeVoiceIds[]
   ambiguous
-  chordLike
-  mixedDurations
-  splitHint?
 authority            NON_CANONICAL_HINT
 ```
+
+### PolyphonicScoreProjection
+
+```text
+authority            REVERSIBLE_HEURISTIC_PROJECTION
+voices[]
+  voiceId
+  measures[]
+    notes[]           projected note/tie segments
+    rests[]           VOICE_GAP
+segments[]
+  sourceEventId
+  measureIndex
+  onsetInMeasure
+  durationQuarter
+  tieFromPrevious
+  tieToNext
+warnings[]
+```
+
+Every projected segment retains `sourceEventId`, source onset and source duration so projection can be regenerated or discarded without losing transcription evidence.
 
 ### ScoreDraft
 
@@ -125,46 +143,44 @@ context
 quantizedEvents[]
 polyphony
 voiceCandidates
-measures[]
-  events[]            note/chord/global-silence-rest
-  diagnostics[]
+polyphonicProjection
+measures[]            attack/global-silence view
 diagnostics[]
+warnings[]
 ```
 
 ## 5. Rhythm policy
 
-The current first-pass rhythm engine uses a supplied BPM and meter. These are an initial operating mode, not a permanent product restriction. Automatic tempo/meter and rubato stages will be adapters/policies that feed the same rational musical-time boundary.
+The first-pass engine currently accepts supplied BPM and meter. These values make the initial personal-use workflow predictable; they are not intended as mandatory permanent constraints. Automatic tempo/meter and rubato stages will feed the same rational musical-time model.
 
-Current regular-grid options are implementation defaults for the first pass, not a statement that other rhythmic values are invalid music. Triplet positions are already admitted; later stages may add broader tuplets and adaptive grids.
+Current quantization grids are implementation defaults, not definitions of valid music. Later stages may widen tuplets and adaptive rhythmic candidates without changing event identity.
 
 ## 6. Polyphony policy
 
-Polyphony is canonical input evidence:
-
 - sustained notes remain active while later attacks occur;
-- a later attack while another strand sustains normally creates or continues another voice hint;
+- later attacks may dynamically create additional voice strands;
+- ended strands are ranked as continuation candidates using register/pitch continuity and temporal gap;
 - same-onset notes are initially chord-like because audio alone may not prove a voice split;
-- if same-onset notes have different quantized durations, a split hint is preserved;
-- ended voice strands are candidate continuations and are ranked by register/pitch continuity plus temporal gap;
-- if two candidates are near-equal, both remain available and the draft continues;
-- voice hints never rewrite the underlying quantized events.
-
-There is no product-level fixed voice count. Resource-safety envelopes may bound pathological input size, but they are not musical rules.
+- mixed-duration same-onset events retain split hints;
+- ambiguous continuation choices preserve alternatives rather than stopping output;
+- per-voice rests are created only after voice projection;
+- notes may cross any number of barlines and are split into reversible tie-candidate segments;
+- the source `QuantizedEvent` is never chopped up or overwritten by projection.
 
 ## 7. Failure / review behavior
 
-Normal musical complexity must not trigger hard failure. In particular, polyphonic overlap is not a review error.
+Normal musical complexity must not trigger hard failure. Polyphonic overlap and cross-measure sustain are normal.
 
-Review metadata is appropriate for reconstructive uncertainty such as unresolved cross-measure tie/split projection. Even then the original draft remains displayable/editable.
+Warnings are appropriate for heuristic uncertainty such as ambiguous voice continuation or mixed-duration chord interpretation. They do not disable rendering/editing/export preparation.
 
-Hard failure is reserved for cases such as:
+Hard failure is reserved for:
 
 - structurally invalid/unreadable event contracts;
 - impossible numeric/timing values;
-- unsafe or pathological resource usage;
-- input that cannot be represented at all without inventing source events.
+- pathological resource usage outside safety envelopes;
+- internal contract mismatch that would otherwise invent or lose source events.
 
-`PASS` / `REVIEW_REQUIRED` are document states, not global capability locks.
+`PASS` / future `REVIEW_REQUIRED` document states must remain separate from capabilities.
 
 ## 8. Planned stages
 
@@ -173,8 +189,8 @@ S00 Foundation               contracts + known-tempo quantizer + draft builder
 S01 Basic Pitch Adapter      real audio -> RawPerformanceEvent
 S02A Sonority                rational active-note spans
 S02B Voice Hints             polyphony-default dynamic strand candidates
-S02C Voice Projection        reversible voices/rests/tie candidates
-S03 Score Editor Bridge      ScoreDraft -> public editor SDK / MusicXML review
+S02C Materialization         reversible voices/rests/tie projection
+S03 Score Editor Bridge      projection -> public editor SDK / MusicXML review
 S04 Automatic Beat/Tempo     beat tracking + tempo-map inference
 S05 Rubato                   local tempo curve / expressive timing
 S06 Teacher Calibration      confidence + correction feedback corpus
