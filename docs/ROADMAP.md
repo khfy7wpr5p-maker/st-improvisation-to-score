@@ -79,7 +79,7 @@ A rights-clean polyphonic MP3 was generated in CI and passed through the real pi
 - Guitar TAB returned `TAB_READY` with `generateTab: true` and `export: true`;
 - source MusicXML remained preserved through the TAB handoff.
 
-## S10A — Teacher Acceptance Reporting — CURRENT
+## S10A — Teacher Acceptance Reporting — COMPLETE
 
 - one report joins pipeline evidence, teacher correction ledger and category-specific calibration;
 - pitch/onset/duration/rhythm/voice remain independent;
@@ -88,8 +88,12 @@ A rights-clean polyphonic MP3 was generated in CI and passed through the real pi
 - no hardcoded product-wide acceptance threshold is introduced;
 - downstream Editor/TAB status remains descriptive and cannot redefine source-score quality.
 
-## S10B — User-Owned Recording Acceptance — WAITING FOR RECORDING EVIDENCE
+## S10B — User-Owned Recording Acceptance — PROVIDER EVIDENCE PENDING
 
-Run real user-owned improvisation MP3/WAV recordings through S08, review them in Score Editor, record teacher corrections, and compare repeated recordings before changing transcription policy or model/provider thresholds.
+User-recording acceptance no longer requires Score Editor. The default path is:
 
-The first S10B quality claim must be based on teacher-reviewed user audio. Synthetic CI audio is infrastructure evidence only.
+`MP3/WAV -> transcription provider -> ScoreDraft -> MusicXML -> teacher acceptance report`
+
+Score Editor and Guitar TAB are optional downstream capabilities and are used only when explicitly requested.
+
+A user-owned guitar improvisation recording has reached audio preflight successfully. Canonical transcription quality claims still require the pinned Basic Pitch provider output plus teacher-reviewed corrections. Missing provider runtime must be reported as `TRANSCRIPTION_UNAVAILABLE`; it must not be replaced with a heuristic transcription and must not turn Score Editor availability into a prerequisite.

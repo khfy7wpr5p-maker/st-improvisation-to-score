@@ -83,6 +83,11 @@ export {
 } from './pipeline/audioToScore.js';
 
 export {
+  USER_RECORDING_ACCEPTANCE_VERSION,
+  runUserRecordingAcceptance,
+} from './pipeline/userRecordingAcceptance.js';
+
+export {
   POLYPHONIC_MATERIALIZER_MAX_SEGMENTS,
   POLYPHONIC_MATERIALIZER_VERSION,
   materializePolyphonicScore,
