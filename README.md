@@ -33,8 +33,14 @@ MIDI remains optional diagnostic/export data. It is not the canonical bridge fro
 - **S04A–S05D Timing — complete:** tempo/meter candidates, provider admission, piecewise timing, local tempo and changing-meter/pickup projection.
 - **S06A–S06E Teacher Workflow — complete:** append-only teacher ledger, calibration, reversible overlay, public authoring receipts and durable source identity through Score Editor edits.
 - **S07 Optional Guitar TAB — complete:** reviewed MusicXML -> optional pinned Guitar TAB capability; TAB failure remains local and source notation stays usable.
-- **S08 End-to-End Audio Runner — current:** host-injected real audio provider -> ScoreDraft -> MusicXML -> optional Score Editor/TAB orchestration.
-- **S09 Real MP3 Runtime Acceptance — current:** rights-clean MP3 -> real Basic Pitch inference -> Score Editor -> optional Guitar TAB runtime CI proof.
+- **S08 End-to-End Audio Runner — complete:** host-injected real-audio provider -> ScoreDraft -> MusicXML -> optional Score Editor/TAB orchestration.
+- **S09 Real MP3 Runtime Acceptance — complete:** a rights-clean polyphonic MP3 passed through real Basic Pitch 0.4.0 inference, Score Editor source identity and the optional Guitar TAB runtime.
+
+## Real-audio gate evidence
+
+The completed S09 gate produced 5 Basic Pitch note events, 5 quantized score events and a 2-voice draft. Score Editor opened the generated MusicXML and resolved all 5 source identities. The Guitar TAB runtime returned `TAB_READY`, `generateTab: true` and `export: true`, while preserving the source MusicXML.
+
+This proves the runtime integration path, not zero-error transcription quality on arbitrary performances. The project is now ready for teacher acceptance testing with user-owned MP3/WAV improvisations.
 
 ## Product policy
 
