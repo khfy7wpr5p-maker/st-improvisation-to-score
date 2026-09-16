@@ -1,10 +1,13 @@
 import { ImprovisationToScoreError, createRawPerformanceEvent } from '../contracts.js';
 
-export const GUITAR_NOTATION_SIMPLIFICATION_VERSION = '0.1.0';
+export const GUITAR_NOTATION_SIMPLIFICATION_VERSION = '0.2.0';
 
 const DEFAULT_OPTIONS = Object.freeze({
   maxChordDurationSpreadQuarter: 0.5,
   maxNextAttackSnapQuarter: 0.5,
+  maxMelodicPitchDistanceSemitones: 7,
+  maxMelodicOverlapQuarter: 0.25,
+  maxMelodicGapQuarter: 0.125,
 });
 
 function fail(code, message, details = {}) {
@@ -41,6 +44,21 @@ function normalizeOptions(input = {}) {
       'maxNextAttackSnapQuarter',
       { min: 0, max: 2 },
     ),
+    maxMelodicPitchDistanceSemitones: finite(
+      input.maxMelodicPitchDistanceSemitones ?? DEFAULT_OPTIONS.maxMelodicPitchDistanceSemitones,
+      'maxMelodicPitchDistanceSemitones',
+      { min: 0, max: 24 },
+    ),
+    maxMelodicOverlapQuarter: finite(
+      input.maxMelodicOverlapQuarter ?? DEFAULT_OPTIONS.maxMelodicOverlapQuarter,
+      'maxMelodicOverlapQuarter',
+      { min: 0, max: 1 },
+    ),
+    maxMelodicGapQuarter: finite(
+      input.maxMelodicGapQuarter ?? DEFAULT_OPTIONS.maxMelodicGapQuarter,
+      'maxMelodicGapQuarter',
+      { min: 0, max: 1 },
+    ),
   });
 }
 
@@ -73,6 +91,11 @@ function representativeExistingDuration(durations) {
   return ordered[Math.floor((ordered.length - 1) / 2)];
 }
 
+function nearestPitchDistance(pitch, events) {
+  if (events.length === 0) return Infinity;
+  return Math.min(...events.map((event) => Math.abs(event.midiPitch - pitch)));
+}
+
 function derivedEvent(event, targetDurationSeconds) {
   return createRawPerformanceEvent({
     eventId: event.eventId,
@@ -92,6 +115,8 @@ export function simplifyGuitarNotationDurations(eventsInput, optionsInput = {}) 
   const quarterSeconds = 60 / bpm;
   const spreadToleranceSeconds = quarterSeconds * options.maxChordDurationSpreadQuarter;
   const nextAttackToleranceSeconds = quarterSeconds * options.maxNextAttackSnapQuarter;
+  const melodicOverlapToleranceSeconds = quarterSeconds * options.maxMelodicOverlapQuarter;
+  const melodicGapToleranceSeconds = quarterSeconds * options.maxMelodicGapQuarter;
   const groups = groupExactAttacks(events);
   const replacements = new Map();
   const provenance = [];
@@ -99,6 +124,9 @@ export function simplifyGuitarNotationDurations(eventsInput, optionsInput = {}) 
   let adjustedEventCount = 0;
   let nextAttackAlignedGroupCount = 0;
   let clusteredDurationGroupCount = 0;
+  let melodicContinuityAdjustmentCount = 0;
+  let melodicOverlapCappedCount = 0;
+  let melodicGapFilledCount = 0;
 
   for (let groupIndex = 0; groupIndex < groups.length; groupIndex += 1) {
     const group = groups[groupIndex];
@@ -146,9 +174,57 @@ export function simplifyGuitarNotationDurations(eventsInput, optionsInput = {}) 
     if (changedInGroup > 0) simplifiedGroupCount += 1;
   }
 
+  for (let groupIndex = 0; groupIndex < groups.length - 1; groupIndex += 1) {
+    const group = groups[groupIndex];
+    const nextGroup = groups[groupIndex + 1];
+    if (group.events.length !== 1 || !nextGroup || nextGroup.onsetSeconds <= group.onsetSeconds) continue;
+
+    const sourceEvent = group.events[0];
+    const event = replacements.get(sourceEvent.eventId) ?? sourceEvent;
+    const pitchDistance = nearestPitchDistance(event.midiPitch, nextGroup.events);
+    if (pitchDistance > options.maxMelodicPitchDistanceSemitones) continue;
+
+    const boundarySeconds = nextGroup.onsetSeconds;
+    const signedEndDeltaSeconds = event.offsetSeconds - boundarySeconds;
+    let reason = null;
+
+    if (
+      signedEndDeltaSeconds > 1e-9 &&
+      signedEndDeltaSeconds <= melodicOverlapToleranceSeconds
+    ) {
+      reason = 'SMALL_MELODIC_OVERLAP_CAPPED_TO_NEXT_ATTACK';
+      melodicOverlapCappedCount += 1;
+    } else if (
+      signedEndDeltaSeconds < -1e-9 &&
+      Math.abs(signedEndDeltaSeconds) <= melodicGapToleranceSeconds
+    ) {
+      reason = 'TINY_MELODIC_GAP_FILLED_TO_NEXT_ATTACK';
+      melodicGapFilledCount += 1;
+    }
+
+    if (reason === null) continue;
+
+    const targetDurationSeconds = boundarySeconds - event.onsetSeconds;
+    if (targetDurationSeconds <= 0) continue;
+
+    replacements.set(event.eventId, derivedEvent(event, targetDurationSeconds));
+    provenance.push(Object.freeze({
+      eventId: event.eventId,
+      action: 'MELODIC_CONTINUITY_RECONSTRUCTED',
+      reason,
+      sourceDurationSeconds: durationSeconds(event),
+      simplifiedDurationSeconds: targetDurationSeconds,
+      nextAttackSeconds: boundarySeconds,
+      pitchDistanceSemitones: pitchDistance,
+    }));
+    adjustedEventCount += 1;
+    melodicContinuityAdjustmentCount += 1;
+  }
+
   const simplifiedEvents = Object.freeze(events.map((event) => replacements.get(event.eventId) ?? event));
-  const diagnostics = simplifiedGroupCount > 0
-    ? Object.freeze([Object.freeze({
+  const diagnostics = [];
+  if (simplifiedGroupCount > 0) {
+    diagnostics.push(Object.freeze({
       code: 'GUITAR_NOTATION_CHORD_DURATIONS_SIMPLIFIED',
       message: 'Near-equal same-attack guitar durations were normalized in the reversible notation view to reduce unnecessary voice and rest fragmentation.',
       details: Object.freeze({
@@ -157,19 +233,33 @@ export function simplifyGuitarNotationDurations(eventsInput, optionsInput = {}) 
         nextAttackAlignedGroupCount,
         clusteredDurationGroupCount,
       }),
-    })])
-    : Object.freeze([]);
+    }));
+  }
+  if (melodicContinuityAdjustmentCount > 0) {
+    diagnostics.push(Object.freeze({
+      code: 'GUITAR_MELODIC_CONTINUITY_RECONSTRUCTED',
+      message: 'Small same-register overlaps and micro-gaps were aligned to the next attack in the reversible notation view to preserve melodic voice continuity without imposing a fixed voice cap.',
+      details: Object.freeze({
+        melodicContinuityAdjustmentCount,
+        melodicOverlapCappedCount,
+        melodicGapFilledCount,
+      }),
+    }));
+  }
 
   return Object.freeze({
-    schemaVersion: 'guitar-notation-simplification-v0.1',
+    schemaVersion: 'guitar-notation-simplification-v0.2',
     simplificationVersion: GUITAR_NOTATION_SIMPLIFICATION_VERSION,
     authority: 'DERIVED_REVERSIBLE_NOTATION_VIEW',
     policy: 'RAW_AND_RECONSTRUCTED_EVIDENCE_PRESERVED',
     options: Object.freeze({ ...options, bpm }),
     simplifiedGroupCount,
     adjustedEventCount,
+    melodicContinuityAdjustmentCount,
+    melodicOverlapCappedCount,
+    melodicGapFilledCount,
     simplifiedEvents,
     provenance: Object.freeze(provenance),
-    diagnostics,
+    diagnostics: Object.freeze(diagnostics),
   });
 }
