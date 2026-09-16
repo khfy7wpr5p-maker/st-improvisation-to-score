@@ -5,16 +5,19 @@ import {
   outputToNotesPoly,
 } from 'https://esm.sh/@spotify/basic-pitch@1.0.1';
 
-import { buildBrowserMusicXmlFromBasicPitch } from '../src/index.js';
+import {
+  BASIC_PITCH_GUITAR_FRAME_THRESHOLD,
+  BASIC_PITCH_GUITAR_MIN_NOTE_LENGTH_FRAMES,
+  BASIC_PITCH_GUITAR_ONSET_THRESHOLD,
+  basicPitchGuitarAdmissionProfile,
+  buildBrowserMusicXmlFromBasicPitch,
+} from '../src/index.js';
 import {
   BASIC_PITCH_AUDIO_SAMPLE_RATE,
   prepareAudioForBasicPitch,
 } from './audioPrepare.js';
 
 const MODEL_URL = 'https://unpkg.com/@spotify/basic-pitch@1.0.1/model/model.json';
-const GUITAR_ONSET_THRESHOLD = 0.3;
-const GUITAR_FRAME_THRESHOLD = 0.25;
-const GUITAR_MIN_NOTE_LENGTH_FRAMES = 8;
 
 const $ = (id) => document.getElementById(id);
 const audioInput = $('audioInput');
@@ -183,9 +186,9 @@ async function transcribe(audioBuffer) {
   const frameNotes = outputToNotesPoly(
     frames,
     onsets,
-    GUITAR_ONSET_THRESHOLD,
-    GUITAR_FRAME_THRESHOLD,
-    GUITAR_MIN_NOTE_LENGTH_FRAMES,
+    BASIC_PITCH_GUITAR_ONSET_THRESHOLD,
+    BASIC_PITCH_GUITAR_FRAME_THRESHOLD,
+    BASIC_PITCH_GUITAR_MIN_NOTE_LENGTH_FRAMES,
   );
   return noteFramesToTime(addPitchBendsToNoteEvents(contours, frameNotes));
 }
@@ -274,6 +277,7 @@ async function convert() {
       meterDenominator,
       smallestNoteDenominator: Number(resolutionSelect.value),
       allowTriplets: tripletInput.checked,
+      admissionProfile: basicPitchGuitarAdmissionProfile(),
       musicXmlOptions: { partName: sanitizeStem(selectedFile.name) },
     });
 

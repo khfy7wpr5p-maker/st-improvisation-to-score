@@ -41,6 +41,14 @@ export {
 } from './adapters/basicPitchBrowser.js';
 
 export {
+  BASIC_PITCH_GUITAR_PROFILE_VERSION,
+  BASIC_PITCH_GUITAR_ONSET_THRESHOLD,
+  BASIC_PITCH_GUITAR_FRAME_THRESHOLD,
+  BASIC_PITCH_GUITAR_MIN_NOTE_LENGTH_FRAMES,
+  basicPitchGuitarAdmissionProfile,
+} from './adapters/basicPitchGuitarProfile.js';
+
+export {
   BEAT_TEMPO_ADAPTER_VERSION,
   BEAT_TEMPO_MAX_BEATS,
   BEAT_TEMPO_MAX_CANDIDATES,
@@ -107,6 +115,11 @@ export {
   cleanGuitarPerformanceEvents,
   reconstructGuitarDurations,
 } from './reconstruction/guitarCleanup.js';
+
+export {
+  GUITAR_REFINEMENT_VERSION,
+  refineGuitarDurationsForVoicePressure,
+} from './reconstruction/guitarRefinement.js';
 
 export {
   POLYPHONIC_MATERIALIZER_MAX_SEGMENTS,
