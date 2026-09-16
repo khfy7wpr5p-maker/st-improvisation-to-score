@@ -122,6 +122,11 @@ export {
 } from './reconstruction/guitarRefinement.js';
 
 export {
+  GUITAR_NOTATION_SIMPLIFICATION_VERSION,
+  simplifyGuitarNotationDurations,
+} from './reconstruction/notationSimplification.js';
+
+export {
   POLYPHONIC_MATERIALIZER_MAX_SEGMENTS,
   POLYPHONIC_MATERIALIZER_VERSION,
   materializePolyphonicScore,
