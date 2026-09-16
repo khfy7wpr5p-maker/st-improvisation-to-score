@@ -29,10 +29,10 @@ test('S12.2 aligns near-equal same-attack durations to the next attack without m
 
   assert.equal(JSON.stringify(input), snapshot);
   assert.equal(result.simplifiedGroupCount, 1);
-  assert.equal(result.adjustedEventCount, 2);
+  assert.equal(result.adjustedEventCount, 3);
   assert.equal(result.simplifiedEvents.find((item) => item.eventId === 'c').offsetSeconds, 0.5);
   assert.equal(result.simplifiedEvents.find((item) => item.eventId === 'e').offsetSeconds, 0.5);
-  assert.equal(result.simplifiedEvents.find((item) => item.eventId === 'g').offsetSeconds, 0.51);
+  assert.equal(result.simplifiedEvents.find((item) => item.eventId === 'g').offsetSeconds, 0.5);
   assert.ok(result.diagnostics.some((item) => item.code === 'GUITAR_NOTATION_CHORD_DURATIONS_SIMPLIFIED'));
 });
 
