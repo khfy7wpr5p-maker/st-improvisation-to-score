@@ -89,7 +89,7 @@ test('S12 low-value browser candidates are removed only from the derived cleanup
   assert.ok(result.diagnostics.some((item) => item.code === 'GUITAR_CLEANUP_CANDIDATES_SUPPRESSED'));
 });
 
-test('S12 repeated notation warnings are grouped deterministically', () => {
+test('S12.2 near-equal chord durations are simplified before voice projection', () => {
   const result = buildBrowserMusicXmlFromBasicPitch({
     noteEvents: [
       { startTimeSeconds: 0, durationSeconds: 0.25, pitchMidi: 60, amplitude: 0.8 },
@@ -103,8 +103,50 @@ test('S12 repeated notation warnings are grouped deterministically', () => {
     allowTriplets: false,
   });
 
-  const grouped = result.diagnostics.find((item) => item.code === 'MIXED_DURATION_CHORD_SPLIT_HINT_PRESERVED');
-  assert.ok(grouped);
-  assert.equal(grouped.details.groupedCount, 2);
-  assert.match(grouped.message, /2 occurrences/);
+  assert.equal(result.summary.notationSimplifiedGroupCount, 2);
+  assert.equal(result.summary.notationAdjustedEventCount, 2);
+  assert.ok(result.diagnostics.some((item) => item.code === 'GUITAR_NOTATION_CHORD_DURATIONS_SIMPLIFIED'));
+  assert.equal(result.diagnostics.some((item) => item.code === 'MIXED_DURATION_CHORD_SPLIT_HINT_PRESERVED'), false);
+});
+
+test('S12.2 low-confidence high tempo prefers the half-tempo family provisionally', () => {
+  const highTempoNotes = Array.from({ length: 6 }, (_, index) => ({
+    startTimeSeconds: index * 0.3834,
+    durationSeconds: 0.2,
+    pitchMidi: 60 + index,
+    amplitude: 0.8,
+  }));
+  const result = buildBrowserMusicXmlFromBasicPitch({
+    noteEvents: highTempoNotes,
+    meterNumerator: 4,
+    meterDenominator: 4,
+  });
+
+  assert.equal(result.tempo.recommendedBpmHint, 156.5);
+  assert.ok(result.tempo.confidence < 0.8);
+  assert.ok(result.summary.bpm < result.tempo.recommendedBpmHint);
+  assert.ok(result.summary.tempoAlternatives.includes(156.5));
+  assert.ok(result.diagnostics.some((item) =>
+    ['BROWSER_AUTO_TEMPO_HALF_DOUBLE_PROVISIONAL', 'BROWSER_HIGH_TEMPO_HALF_FAMILY_REQUIRES_REVIEW'].includes(item.code)
+  ));
+});
+
+test('S12.2 display MusicXML hides voice-gap rests while preserving analysis projection', () => {
+  const result = buildBrowserMusicXmlFromBasicPitch({
+    noteEvents: [
+      { startTimeSeconds: 0, durationSeconds: 2.0, pitchMidi: 48, amplitude: 0.8 },
+      { startTimeSeconds: 0.5, durationSeconds: 0.2, pitchMidi: 64, amplitude: 0.8 },
+      { startTimeSeconds: 0.75, durationSeconds: 0.2, pitchMidi: 65, amplitude: 0.8 },
+    ],
+    bpm: 120,
+    meterNumerator: 4,
+    meterDenominator: 4,
+    allowTriplets: false,
+  });
+
+  assert.ok(result.summary.suppressedVoiceGapRestCount > 0);
+  assert.ok(result.analysisScore.polyphonicProjection.restCount > 0);
+  assert.equal(result.score.polyphonicProjection.restCount, 0);
+  assert.equal(result.musicXml.includes('<rest/>'), false);
+  assert.match(result.musicXml, /<forward>/);
 });
