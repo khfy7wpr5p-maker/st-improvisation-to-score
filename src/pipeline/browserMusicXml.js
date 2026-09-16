@@ -4,10 +4,11 @@ import {
   cleanGuitarPerformanceEvents,
   reconstructGuitarDurations,
 } from '../reconstruction/guitarCleanup.js';
+import { refineGuitarDurationsForVoicePressure } from '../reconstruction/guitarRefinement.js';
 import { buildScoreDraft } from '../scoreDraft.js';
 import { analyzeTempoCandidates } from '../timing/tempoCandidates.js';
 
-export const BROWSER_MUSICXML_PIPELINE_VERSION = '0.2.0';
+export const BROWSER_MUSICXML_PIPELINE_VERSION = '0.3.0';
 
 function finiteBpm(value) {
   if (value == null || value === '') return null;
@@ -41,7 +42,23 @@ function provisionalAutoBpm(tempo) {
   const rivals = tempo.ambiguity?.halfDouble === true
     ? (tempo.ambiguity?.rivalBpms ?? []).filter((value) => Number.isFinite(value) && value > 0)
     : [];
-  const alternatives = [...new Set([top, ...rivals])].sort((a, b) => a - b);
+  const highTempoHalf = top >= 180 ? Number((top / 2).toFixed(3)) : null;
+  const alternatives = [...new Set([
+    top,
+    ...rivals,
+    ...(highTempoHalf !== null ? [highTempoHalf] : []),
+  ])].sort((a, b) => a - b);
+
+  if (highTempoHalf !== null) {
+    return Object.freeze({
+      bpm: highTempoHalf,
+      decision: tempo.ambiguity?.halfDouble === true
+        ? 'HALF_DOUBLE_LOWER_PROVISIONAL'
+        : 'HIGH_TEMPO_HALF_FAMILY_PROVISIONAL',
+      alternatives: Object.freeze(alternatives),
+    });
+  }
+
   if (alternatives.length > 1) {
     return Object.freeze({
       bpm: alternatives[0],
@@ -115,6 +132,11 @@ export function buildBrowserMusicXmlFromBasicPitch(input = {}) {
     maxChordSustainGapSeconds: input.guitarCleanupOptions?.maxChordSustainGapSeconds,
   });
 
+  const voicePressureRefinement = refineGuitarDurationsForVoicePressure(
+    durationReconstruction.reconstructedEvents,
+    input.guitarRefinementOptions ?? {},
+  );
+
   const context = Object.freeze({
     bpm,
     meterNumerator,
@@ -123,13 +145,14 @@ export function buildBrowserMusicXmlFromBasicPitch(input = {}) {
     allowTriplets: input.allowTriplets !== false,
   });
 
-  const score = buildScoreDraft(durationReconstruction.reconstructedEvents, context);
+  const score = buildScoreDraft(voicePressureRefinement.refinedEvents, context);
   const musicXml = serializeScoreDraftToMusicXml(score, input.musicXmlOptions ?? {});
   const rawDiagnostics = [
     ...batch.diagnostics,
     ...cleanup.diagnostics,
     ...tempo.warnings,
     ...durationReconstruction.diagnostics,
+    ...voicePressureRefinement.diagnostics,
     ...(score.diagnostics ?? []),
     ...(score.warnings ?? []),
   ];
@@ -147,6 +170,16 @@ export function buildBrowserMusicXmlFromBasicPitch(input = {}) {
       'BROWSER_AUTO_TEMPO_FALLBACK',
       'Tempo evidence was insufficient; a provisional 120 BPM grid was used so MusicXML remains available.',
       { bpm },
+    ));
+  } else if (requestedBpm == null && autoTempoDecision.decision === 'HIGH_TEMPO_HALF_FAMILY_PROVISIONAL') {
+    rawDiagnostics.push(warning(
+      'BROWSER_HIGH_TEMPO_HALF_FAMILY_REQUIRES_REVIEW',
+      'A high automatic tempo has a plausible half-tempo interpretation; the lower family member is used provisionally while both remain visible for review.',
+      {
+        bpm,
+        recommendedBpmHint: tempo.recommendedBpmHint,
+        alternatives: autoTempoDecision.alternatives,
+      },
     ));
   } else if (requestedBpm == null && tempo.ambiguity?.halfDouble === true) {
     rawDiagnostics.push(warning(
@@ -177,13 +210,14 @@ export function buildBrowserMusicXmlFromBasicPitch(input = {}) {
   const diagnostics = groupDiagnostics(rawDiagnostics);
 
   return Object.freeze({
-    schemaVersion: 'browser-musicxml-result-v0.2',
+    schemaVersion: 'browser-musicxml-result-v0.3',
     pipelineVersion: BROWSER_MUSICXML_PIPELINE_VERSION,
     ok: true,
     status: diagnostics.length === 0 ? 'PASS' : 'REVIEW_REQUIRED',
     transcription: batch,
     guitarCleanup: cleanup,
     durationReconstruction,
+    voicePressureRefinement,
     tempo,
     tempoDecision: Object.freeze({
       requestedBpm,
@@ -199,12 +233,14 @@ export function buildBrowserMusicXmlFromBasicPitch(input = {}) {
       retainedEventCount: cleanupFallbackToRaw ? batch.rawEvents.length : cleanup.cleanedEvents.length,
       suppressedEventCount: cleanupFallbackToRaw ? 0 : cleanup.suppressedEventCount,
       attackGroupCount: cleanup.attackGroups.length,
+      resonanceCappedEventCount: voicePressureRefinement.cappedEventCount,
       voiceCount: score.polyphonicProjection?.voiceCount ?? null,
       bpm,
       bpmSource: requestedBpm == null ? 'AUTO_PROVISIONAL' : 'USER',
       tempoDecision: requestedBpm == null ? autoTempoDecision.decision : 'USER_SUPPLIED',
       tempoAlternatives: requestedBpm == null ? autoTempoDecision.alternatives : Object.freeze([requestedBpm]),
       meter: `${meterNumerator}/${meterDenominator}`,
+      admissionProfile: input.admissionProfile ?? null,
     }),
     diagnostics,
   });
