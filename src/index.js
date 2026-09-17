@@ -107,6 +107,12 @@ export {
 } from './export/musicXml.js';
 
 export {
+  EXTERNAL_GUITAR_EVIDENCE_HOST_VERSION,
+  EXTERNAL_GUITAR_EVIDENCE_MAX_OUTPUT_BYTES,
+  runExternalGuitarEvidenceProvider,
+} from './providers/externalGuitarEvidenceHost.js';
+
+export {
   AUDIO_TO_SCORE_PIPELINE_VERSION,
   runAudioToScorePipeline,
 } from './pipeline/audioToScore.js';
@@ -125,6 +131,11 @@ export {
   LEARNED_GUITAR_EVIDENCE_PIPELINE_VERSION,
   buildLearnedGuitarEvidenceShadow,
 } from './pipeline/learnedGuitarEvidence.js';
+
+export {
+  PROVIDER_HOSTED_LEARNED_GUITAR_EVIDENCE_VERSION,
+  runProviderHostedLearnedGuitarEvidence,
+} from './pipeline/providerHostedLearnedGuitarEvidence.js';
 
 export {
   GUITAR_EVIDENCE_VERSION,
