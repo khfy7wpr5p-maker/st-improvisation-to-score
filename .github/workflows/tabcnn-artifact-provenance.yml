@@ -55,5 +55,5 @@ jobs:
             exit 0
           fi
           EXPECTED="$(node -e "const fs=require('fs');const m=JSON.parse(fs.readFileSync('config/models/tabcnn-f16.json','utf8'));process.stdout.write(m.expectedSha256)")"
-          ACTUAL="\${{ steps.checksum.outputs.sha256 }}"
+          ACTUAL="${{ steps.checksum.outputs.sha256 }}"
           test "$EXPECTED" = "$ACTUAL"
