@@ -34,10 +34,10 @@ test('projects non-silent frame decisions to one-frame string/fret observations'
   assert.deepEqual(
     predictions.map((p) => [p.stringIndex, p.fret, p.midiPitch]),
     [
-      [0, 1, 41],
-      [5, 0, 64],
-      [0, 1, 41],
-      [3, 2, 57],
+      [1, 1, 41],
+      [6, 0, 64],
+      [1, 1, 41],
+      [4, 2, 57],
     ],
   );
   assert.ok(predictions.every((p) => Number.isFinite(p.onsetSeconds)));
@@ -52,6 +52,7 @@ test('preserves the raw frame record for provenance', async () => {
 
   assert.deepEqual(predictions[0].metadata.rawFrame, parsed.frames[0]);
   assert.equal(predictions[0].metadata.frameIndex, 0);
+  assert.equal(predictions[0].metadata.providerStringIndex0Based, 0);
 });
 
 test('rejects malformed dimensions instead of fabricating evidence', async () => {
