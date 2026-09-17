@@ -1,12 +1,26 @@
 import { runExternalGuitarEvidenceProvider } from '../providers/externalGuitarEvidenceHost.js';
 import { buildLearnedGuitarEvidenceShadow } from './learnedGuitarEvidence.js';
 
-export const PROVIDER_HOSTED_LEARNED_GUITAR_EVIDENCE_VERSION = '0.1.0';
+export const PROVIDER_HOSTED_LEARNED_GUITAR_EVIDENCE_VERSION = '0.2.0';
 
 function configuredHost(spec, providerId) {
   if (spec == null) return null;
   if (typeof spec !== 'object' || Array.isArray(spec)) throw new TypeError(`${providerId} host must be a plain object.`);
   return { ...spec, providerId };
+}
+
+function providerDiagnostic(result) {
+  const payload = result?.payload;
+  const artifact = payload?.artifact;
+  return Object.freeze({
+    status: result?.status ?? 'UNAVAILABLE',
+    reason: result?.reason ?? null,
+    artifactStatus: artifact?.status ?? null,
+    artifactSha256: artifact?.actualSha256 ?? null,
+    expectedArtifactSha256: artifact?.expectedSha256 ?? null,
+    rawFrameCount: Array.isArray(payload?.rawFrames) ? payload.rawFrames.length : 0,
+    predictionCount: Array.isArray(payload?.predictions) ? payload.predictions.length : 0,
+  });
 }
 
 export async function runProviderHostedLearnedGuitarEvidence(input = {}) {
@@ -39,12 +53,17 @@ export async function runProviderHostedLearnedGuitarEvidence(input = {}) {
     fusionOptions: input.fusionOptions ?? {},
   });
 
+  const providerDiagnostics = Object.freeze(Object.fromEntries(
+    hostResults.map((result) => [result.providerId, providerDiagnostic(result)]),
+  ));
+
   return Object.freeze({
-    schemaVersion: 'provider-hosted-learned-guitar-evidence-v0.1',
+    schemaVersion: 'provider-hosted-learned-guitar-evidence-v0.2',
     pipelineVersion: PROVIDER_HOSTED_LEARNED_GUITAR_EVIDENCE_VERSION,
     authority: 'SHADOW_EVIDENCE_ONLY',
     audioPath,
     hostResults: Object.freeze(hostResults),
+    providerDiagnostics,
     shadow,
     summary: Object.freeze({
       configuredProviderCount: hostSpecs.length,
