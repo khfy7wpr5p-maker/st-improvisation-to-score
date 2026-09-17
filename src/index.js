@@ -49,6 +49,18 @@ export {
 } from './adapters/basicPitchGuitarProfile.js';
 
 export {
+  TABCNN_EVIDENCE_ADAPTER_VERSION,
+  TABCNN_EVIDENCE_PROVIDER_ID,
+  adaptTabCnnShadowEvidence,
+} from './adapters/tabCnnEvidence.js';
+
+export {
+  FRETNET_EVIDENCE_ADAPTER_VERSION,
+  FRETNET_EVIDENCE_PROVIDER_ID,
+  adaptFretNetShadowEvidence,
+} from './adapters/fretNetEvidence.js';
+
+export {
   BEAT_TEMPO_ADAPTER_VERSION,
   BEAT_TEMPO_MAX_BEATS,
   BEAT_TEMPO_MAX_CANDIDATES,
@@ -108,6 +120,23 @@ export {
   BROWSER_MUSICXML_PIPELINE_VERSION,
   buildBrowserMusicXmlFromBasicPitch,
 } from './pipeline/browserMusicXml.js';
+
+export {
+  LEARNED_GUITAR_EVIDENCE_PIPELINE_VERSION,
+  buildLearnedGuitarEvidenceShadow,
+} from './pipeline/learnedGuitarEvidence.js';
+
+export {
+  GUITAR_EVIDENCE_VERSION,
+  GUITAR_EVIDENCE_MAX_OBSERVATIONS,
+  GUITAR_EVIDENCE_AUTHORITY,
+  createGuitarEvidenceBatch,
+} from './evidence/guitarEvidence.js';
+
+export {
+  GUITAR_EVIDENCE_FUSION_VERSION,
+  fuseGuitarEvidence,
+} from './evidence/guitarEvidenceFusion.js';
 
 export {
   GUITAR_CLEANUP_MAX_EVENTS,
