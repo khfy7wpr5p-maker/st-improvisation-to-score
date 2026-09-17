@@ -113,6 +113,12 @@ export {
 } from './providers/externalGuitarEvidenceHost.js';
 
 export {
+  MODEL_ARTIFACT_VERIFIER_VERSION,
+  validateModelArtifactManifest,
+  verifyModelArtifact,
+} from './providers/modelArtifactVerifier.js';
+
+export {
   AUDIO_TO_SCORE_PIPELINE_VERSION,
   runAudioToScorePipeline,
 } from './pipeline/audioToScore.js';
