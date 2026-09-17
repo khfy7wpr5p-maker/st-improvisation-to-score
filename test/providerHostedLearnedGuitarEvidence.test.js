@@ -7,7 +7,7 @@ import {
   runProviderHostedLearnedGuitarEvidence,
 } from '../src/index.js';
 
-const fixture = fileURLToPath(new URL('./fixtures/learnedProviderHostFixture.mjs', import.meta.url));
+const fixture = fileURLToPath(new URL('../fixtures/provider-host/learnedProviderHostFixture.mjs', import.meta.url));
 
 function baseEvent() {
   return Object.freeze({
