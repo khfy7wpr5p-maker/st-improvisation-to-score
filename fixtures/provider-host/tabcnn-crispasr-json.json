@@ -1,0 +1,31 @@
+{
+  "file": "rights-clean-guitar.wav",
+  "frame_period_sec": 0.023220,
+  "n_strings": 6,
+  "n_classes": 21,
+  "silent_class": 20,
+  "frames": [
+    {
+      "time": 0.000,
+      "frets": [
+        {"fret": 1, "logp": -0.1000},
+        {"fret": -1, "logp": -0.0200},
+        {"fret": -1, "logp": -0.0300},
+        {"fret": -1, "logp": -0.0400},
+        {"fret": -1, "logp": -0.0500},
+        {"fret": 0, "logp": -0.2000}
+      ]
+    },
+    {
+      "time": 0.023,
+      "frets": [
+        {"fret": 1, "logp": -0.1200},
+        {"fret": -1, "logp": -0.0200},
+        {"fret": -1, "logp": -0.0300},
+        {"fret": 2, "logp": -0.3000},
+        {"fret": -1, "logp": -0.0500},
+        {"fret": -1, "logp": -0.0700}
+      ]
+    }
+  ]
+}
