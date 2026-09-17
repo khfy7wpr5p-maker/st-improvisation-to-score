@@ -1,0 +1,59 @@
+name: TabCNN Artifact Provenance
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/tabcnn-artifact-provenance.yml"
+      - "config/models/tabcnn-f16.json"
+      - "src/providers/modelArtifactVerifier.js"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  checksum:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download exact TabCNN F16 artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/st-models"
+          curl -L --fail --retry 3 --retry-delay 2 \
+            -o "$RUNNER_TEMP/st-models/tabcnn-f16.gguf" \
+            "https://huggingface.co/cstr/tabcnn-GGUF/resolve/main/tabcnn-f16.gguf"
+
+      - name: Record exact SHA-256
+        id: checksum
+        shell: bash
+        run: |
+          set -euo pipefail
+          HASH="$(sha256sum "$RUNNER_TEMP/st-models/tabcnn-f16.gguf" | awk '{print $1}')"
+          SIZE="$(stat -c %s "$RUNNER_TEMP/st-models/tabcnn-f16.gguf")"
+          echo "sha256=$HASH" >> "$GITHUB_OUTPUT"
+          echo "size=$SIZE" >> "$GITHUB_OUTPUT"
+          echo "tabcnn-f16.gguf sha256=$HASH size=$SIZE"
+          {
+            echo "### TabCNN artifact provenance"
+            echo ""
+            echo "- file: tabcnn-f16.gguf"
+            echo "- sha256: $HASH"
+            echo "- bytes: $SIZE"
+            echo "- source: cstr/tabcnn-GGUF"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Verify committed manifest when present
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! -f config/models/tabcnn-f16.json ]]; then
+            echo "Manifest not committed yet; checksum discovery mode."
+            exit 0
+          fi
+          EXPECTED="$(node -e "const fs=require('fs');const m=JSON.parse(fs.readFileSync('config/models/tabcnn-f16.json','utf8'));process.stdout.write(m.expectedSha256)")"
+          ACTUAL="\${{ steps.checksum.outputs.sha256 }}"
+          test "$EXPECTED" = "$ACTUAL"
