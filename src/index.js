@@ -119,6 +119,13 @@ export {
 } from './providers/modelArtifactVerifier.js';
 
 export {
+  TABCNN_CRISPASR_BRIDGE_VERSION,
+  TABCNN_STANDARD_OPEN_MIDI_LOW_TO_HIGH,
+  parseCrispAsrTabJson,
+  projectTabCnnFramesToPredictions,
+} from './providers/tabCnnCrispAsr.js';
+
+export {
   AUDIO_TO_SCORE_PIPELINE_VERSION,
   runAudioToScorePipeline,
 } from './pipeline/audioToScore.js';
