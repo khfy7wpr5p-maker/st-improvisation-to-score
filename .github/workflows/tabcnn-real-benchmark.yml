@@ -88,6 +88,26 @@ jobs:
           ACTUAL="$(sha256sum /tmp/tabcnn-f16.gguf | awk '{print $1}')"
           test "$EXPECTED" = "$ACTUAL"
 
+      - name: Verify TabCNN tuning metadata from GGUF
+        shell: bash
+        run: |
+          set -euo pipefail
+          PYTHONPATH=".integration/CrispASR/ggml/gguf-py" python - <<'PY'
+          import json
+          from gguf import GGUFReader
+
+          manifest = json.load(open("config/models/tabcnn-f16.json", "r", encoding="utf-8"))
+          reader = GGUFReader("/tmp/tabcnn-f16.gguf")
+          field = reader.fields.get("tabcnn.tuning")
+          if field is None:
+              raise SystemExit("tabcnn.tuning missing from verified GGUF")
+          actual = [bytes(field.parts[offset]).decode("utf-8") for offset in field.data]
+          expected = manifest["tuning"]
+          if actual != expected:
+              raise SystemExit(f"tabcnn.tuning mismatch: expected={expected} actual={actual}")
+          print(json.dumps({"tabcnn.tuning": actual, "openMidiByString": manifest["openMidiByString"]}))
+          PY
+
       - name: Download rights-clean EGSet12 real guitar fixture
         shell: bash
         run: |
