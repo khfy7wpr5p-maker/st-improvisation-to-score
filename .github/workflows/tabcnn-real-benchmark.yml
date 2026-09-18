@@ -49,6 +49,15 @@ jobs:
           cache: pip
           cache-dependency-path: .integration/st-omr-correction-engine/providers/basic-pitch/requirements.txt
 
+      - name: Preflight GGUF metadata reader
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from gguf import GGUFReader
+          print(f"GGUFReader import OK: {GGUFReader.__name__}")
+          PY
+
       - name: Install Basic Pitch provider host
         working-directory: .integration/st-omr-correction-engine
         run: npm install --ignore-scripts --no-audit --no-fund
