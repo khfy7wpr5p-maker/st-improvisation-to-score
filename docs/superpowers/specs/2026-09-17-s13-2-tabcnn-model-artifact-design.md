@@ -2,7 +2,7 @@
 
 Date: 2026-09-17
 Project: st-improvisation-to-score
-Status: design approved in chat; implementation not started
+Status: IMPLEMENTED_AND_BENCHMARKED_PENDING_MERGE
 
 ## Goal
 
