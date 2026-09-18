@@ -6,7 +6,10 @@ import {
   parseCrispAsrTabJson,
   projectTabCnnFramesToPredictions,
 } from '../../src/providers/tabCnnCrispAsr.js';
-import { verifyModelArtifact } from '../../src/providers/modelArtifactVerifier.js';
+import {
+  validateModelArtifactManifest,
+  verifyModelArtifact,
+} from '../../src/providers/modelArtifactVerifier.js';
 
 const PROVIDER_VERSION = 'tabcnn-crispasr-provider-v0.1';
 const MAX_STDOUT_BYTES = 16 * 1024 * 1024;
@@ -86,7 +89,7 @@ try {
   const modelPath = requiredEnv('ST_TABCNN_MODEL_PATH');
   const manifestPath = requiredEnv('ST_TABCNN_MANIFEST_PATH');
 
-  const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
+  const manifest = validateModelArtifactManifest(JSON.parse(await readFile(manifestPath, 'utf8')));
   const artifact = await verifyModelArtifact({ manifest, artifactPath: modelPath });
   if (artifact.status !== 'VERIFIED') {
     throw new Error(`TabCNN model verification failed: ${artifact.reason ?? artifact.status}`);
@@ -103,7 +106,9 @@ try {
   }
 
   const parsed = parseCrispAsrTabJson(rawPayload);
-  const predictions = projectTabCnnFramesToPredictions(parsed);
+  const predictions = projectTabCnnFramesToPredictions(parsed, {
+    openMidiByString: manifest.openMidiByString,
+  });
 
   process.stdout.write(JSON.stringify({
     providerVersion: PROVIDER_VERSION,
@@ -116,6 +121,8 @@ try {
       modelFilename: manifest.modelFilename,
       license: manifest.license,
       architecture: manifest.architecture,
+      tuning: manifest.tuning,
+      openMidiByString: manifest.openMidiByString,
     },
     predictions,
     rawFrames: parsed.frames,
