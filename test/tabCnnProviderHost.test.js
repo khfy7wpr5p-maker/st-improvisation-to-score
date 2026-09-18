@@ -20,7 +20,13 @@ const fakeCrispAsr = fileURLToPath(
 
 const sha256 = (bytes) => createHash('sha256').update(bytes).digest('hex');
 
-async function setup({ expectedSha256 = null, fakeMode = null, crispAsrBin = fakeCrispAsr } = {}) {
+async function setup({
+  expectedSha256 = null,
+  fakeMode = null,
+  crispAsrBin = fakeCrispAsr,
+  tuning = ['E2', 'A2', 'D3', 'G3', 'B3', 'E4'],
+  openMidiByString = [40, 45, 50, 55, 59, 64],
+} = {}) {
   const dir = await mkdtemp(join(tmpdir(), 'st-tabcnn-host-'));
   const modelPath = join(dir, 'tabcnn-f16.gguf');
   const manifestPath = join(dir, 'tabcnn-f16.json');
@@ -40,8 +46,8 @@ async function setup({ expectedSha256 = null, fakeMode = null, crispAsrBin = fak
     sourceArtifactSha256: '1470a308896629352a811082843eb708cbc2f1aa3092757340055ef76a53ed0c',
     expectedSha256: expectedSha256 ?? sha256(modelBytes),
     architecture: 'tabcnn',
-    tuning: ['E2', 'A2', 'D3', 'G3', 'B3', 'E4'],
-    openMidiByString: [40, 45, 50, 55, 59, 64],
+    tuning,
+    openMidiByString,
     authority: 'SHADOW_EVIDENCE_ONLY',
   };
   await writeFile(manifestPath, JSON.stringify(manifest));
@@ -75,6 +81,25 @@ test('verified model runs through CrispASR and returns normalized shadow evidenc
   assert.match(result.payload.artifact.actualSha256, /^[a-f0-9]{64}$/);
   assert.ok(result.payload.predictions.length > 0);
   assert.ok(Array.isArray(result.payload.rawFrames));
+});
+
+test('provider host derives projected pitches from the validated manifest tuning', async () => {
+  const { audioPath, env } = await setup({
+    tuning: ['D2', 'G2', 'C3', 'F3', 'A3', 'D4'],
+    openMidiByString: [38, 43, 48, 53, 57, 62],
+  });
+
+  const result = await runExternalGuitarEvidenceProvider({
+    providerId: 'tabcnn',
+    audioPath,
+    command: process.execPath,
+    args: [providerScript],
+    env,
+  });
+
+  assert.equal(result.status, 'READY');
+  assert.equal(result.payload.predictions[0].midiPitch, 39);
+  assert.deepEqual(result.payload.artifact.openMidiByString, [38, 43, 48, 53, 57, 62]);
 });
 
 test('hash mismatch cannot become READY', async () => {
