@@ -64,6 +64,14 @@ jobs:
           path: .integration/CrispASR
           submodules: recursive
 
+      - name: Verify CrispASR runtime pin
+        shell: bash
+        run: |
+          set -euo pipefail
+          EXPECTED="$(node -e 'const fs=require("fs");const m=JSON.parse(fs.readFileSync("config/models/tabcnn-f16.json","utf8"));process.stdout.write(m.runtimeCommit)')"
+          ACTUAL="$(git -C .integration/CrispASR rev-parse HEAD)"
+          test "$EXPECTED" = "$ACTUAL"
+
       - name: Build pinned CrispASR CLI
         shell: bash
         run: |
