@@ -49,6 +49,8 @@ async function setup() {
     sourceArtifactSha256: '1470a308896629352a811082843eb708cbc2f1aa3092757340055ef76a53ed0c',
     expectedSha256: sha256(modelBytes),
     architecture: 'tabcnn',
+    tuning: ['E2', 'A2', 'D3', 'G3', 'B3', 'E4'],
+    openMidiByString: [40, 45, 50, 55, 59, 64],
     authority: 'SHADOW_EVIDENCE_ONLY'
   }));
 
