@@ -13,6 +13,7 @@ import {
 
 const PROVIDER_VERSION = 'tabcnn-crispasr-provider-v0.2';
 const MAX_STDOUT_BYTES = 16 * 1024 * 1024;
+const DEFAULT_CRISPASR_TIMEOUT_MS = 110_000;
 
 function requiredEnv(name) {
   const value = process.env[name];
@@ -38,11 +39,22 @@ async function readRequest() {
   return request;
 }
 
-function runCrispAsr(command, args) {
+function crispAsrTimeoutMs() {
+  const raw = process.env.ST_TABCNN_CRISPASR_TIMEOUT_MS;
+  if (raw == null || raw === '') return DEFAULT_CRISPASR_TIMEOUT_MS;
+  const value = Number(raw);
+  if (!Number.isInteger(value) || value < 100 || value > 600_000) {
+    throw new Error('ST_TABCNN_CRISPASR_TIMEOUT_MS must be an integer between 100 and 600000.');
+  }
+  return value;
+}
+
+function runCrispAsr(command, args, timeoutMs) {
   return new Promise((resolve, reject) => {
     let stdout = '';
     let stderr = '';
     let settled = false;
+    let timer = null;
 
     const child = spawn(command, args, {
       shell: false,
@@ -53,10 +65,15 @@ function runCrispAsr(command, args) {
     const fail = (error) => {
       if (settled) return;
       settled = true;
+      if (timer) clearTimeout(timer);
       reject(error);
     };
 
     child.on('error', fail);
+    timer = setTimeout(() => {
+      child.kill('SIGKILL');
+      fail(new Error(`CrispASR timed out after ${timeoutMs} ms.`));
+    }, timeoutMs);
     child.stdout.on('data', (chunk) => {
       if (settled) return;
       stdout += chunk.toString('utf8');
@@ -74,6 +91,7 @@ function runCrispAsr(command, args) {
     child.on('close', (code, signal) => {
       if (settled) return;
       settled = true;
+      if (timer) clearTimeout(timer);
       if (code !== 0) {
         reject(new Error(`CrispASR exited with code ${code} signal ${signal ?? 'none'}: ${stderr.slice(-4096)}`));
         return;
@@ -96,7 +114,7 @@ try {
   }
 
   const args = ['--tab', '-m', modelPath, '-f', request.audioPath, '--tab-format', 'json'];
-  const stdout = await runCrispAsr(crispAsrBin, args);
+  const stdout = await runCrispAsr(crispAsrBin, args, crispAsrTimeoutMs());
 
   let rawPayload;
   try {
