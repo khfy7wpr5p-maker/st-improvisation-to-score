@@ -5,6 +5,8 @@ on:
     paths:
       - ".github/workflows/tabcnn-real-benchmark.yml"
       - "config/models/tabcnn-f16.json"
+      - "docs/S13_2_TABCNN_REAL_PROVIDER.md"
+      - "docs/superpowers/specs/2026-09-17-s13-2-tabcnn-model-artifact-design.md"
       - "scripts/benchmark-tabcnn-provider.mjs"
       - "scripts/basicPitchEventsForTabCnnBenchmark.mjs"
       - "scripts/provider-hosts/tabcnn-crispasr-provider.mjs"
