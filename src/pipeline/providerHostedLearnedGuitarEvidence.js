@@ -18,6 +18,10 @@ function providerDiagnostic(result) {
     artifactStatus: artifact?.status ?? null,
     artifactSha256: artifact?.actualSha256 ?? null,
     expectedArtifactSha256: artifact?.expectedSha256 ?? null,
+    runtimeRepository: artifact?.runtimeRepository ?? null,
+    runtimeCommit: artifact?.runtimeCommit ?? null,
+    tuning: Array.isArray(artifact?.tuning) ? Object.freeze([...artifact.tuning]) : null,
+    openMidiByString: Array.isArray(artifact?.openMidiByString) ? Object.freeze([...artifact.openMidiByString]) : null,
     rawFrameCount: Array.isArray(payload?.rawFrames) ? payload.rawFrames.length : 0,
     predictionCount: Array.isArray(payload?.predictions) ? payload.predictions.length : 0,
   });
