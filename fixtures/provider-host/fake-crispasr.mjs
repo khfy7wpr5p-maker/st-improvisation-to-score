@@ -11,6 +11,11 @@ if (JSON.stringify(args) !== JSON.stringify(expected)) {
   process.exit(9);
 }
 
+if (process.env.ST_FAKE_CRISPASR_MODE === 'hang') {
+  setInterval(() => {}, 1000);
+  await new Promise(() => {});
+}
+
 if (process.env.ST_FAKE_CRISPASR_MODE === 'malformed') {
   process.stdout.write('{not-json');
   process.exit(0);
