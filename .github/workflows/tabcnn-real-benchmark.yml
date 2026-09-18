@@ -1,0 +1,197 @@
+name: TabCNN Real Guitar Benchmark
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/tabcnn-real-benchmark.yml"
+      - "config/models/tabcnn-f16.json"
+      - "docs/S13_2_TABCNN_REAL_PROVIDER.md"
+      - "docs/superpowers/specs/2026-09-17-s13-2-tabcnn-model-artifact-design.md"
+      - "scripts/benchmark-tabcnn-provider.mjs"
+      - "scripts/basicPitchEventsForTabCnnBenchmark.mjs"
+      - "scripts/provider-hosts/tabcnn-crispasr-provider.mjs"
+      - "src/providers/modelArtifactVerifier.js"
+      - "src/providers/tabCnnCrispAsr.js"
+      - "src/pipeline/providerHostedLearnedGuitarEvidence.js"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  real-guitar:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - name: Checkout transcription pipeline
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install transcription pipeline
+        run: npm install --ignore-scripts --no-audit --no-fund
+
+      - name: Checkout pinned Basic Pitch provider host
+        uses: actions/checkout@v4
+        with:
+          repository: khfy7wpr5p-maker/st-omr-correction-engine
+          ref: 122725676cb1f2cb0eddb05d791bd11abea13b32
+          path: .integration/st-omr-correction-engine
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: .integration/st-omr-correction-engine/providers/basic-pitch/requirements.txt
+
+      - name: Install pinned GGUF metadata reader
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check "gguf==0.19.0"
+
+      - name: Preflight GGUF metadata reader
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from importlib.metadata import version
+          from gguf import GGUFReader
+
+          actual = version("gguf")
+          if actual != "0.19.0":
+              raise SystemExit(f"unexpected gguf version: {actual}")
+          print(f"GGUFReader import OK: {GGUFReader.__name__} gguf={actual}")
+          PY
+
+      - name: Install Basic Pitch provider host
+        working-directory: .integration/st-omr-correction-engine
+        run: npm install --ignore-scripts --no-audit --no-fund
+
+      - name: Install pinned Basic Pitch runtime
+        run: python -m pip install --disable-pip-version-check -r .integration/st-omr-correction-engine/providers/basic-pitch/requirements.txt
+
+      - name: Checkout pinned CrispASR source
+        uses: actions/checkout@v4
+        with:
+          repository: CrispStrobe/CrispASR
+          ref: e4b59c9fb97a155da91395862e2fa26f77f1c7c7
+          path: .integration/CrispASR
+          submodules: recursive
+
+      - name: Verify CrispASR runtime pin
+        shell: bash
+        run: |
+          set -euo pipefail
+          EXPECTED="$(node -e 'const fs=require("fs");const m=JSON.parse(fs.readFileSync("config/models/tabcnn-f16.json","utf8"));process.stdout.write(m.runtimeCommit)')"
+          ACTUAL="$(git -C .integration/CrispASR rev-parse HEAD)"
+          test "$EXPECTED" = "$ACTUAL"
+
+      - name: Build pinned CrispASR CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          cmake -S .integration/CrispASR -B .integration/CrispASR/build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCRISPASR_BUILD_TESTS=OFF \
+            -DGGML_CUDA=OFF \
+            -DGGML_VULKAN=OFF \
+            -DGGML_METAL=OFF
+          cmake --build .integration/CrispASR/build --target crispasr-cli -j2
+          test -x .integration/CrispASR/build/bin/crispasr
+
+      - name: Download and verify exact TabCNN F16 model
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -L --fail --retry 3 --retry-delay 2 \
+            -o /tmp/tabcnn-f16.gguf \
+            "https://huggingface.co/cstr/tabcnn-GGUF/resolve/main/tabcnn-f16.gguf"
+          EXPECTED="$(node -e 'const fs=require("fs");const m=JSON.parse(fs.readFileSync("config/models/tabcnn-f16.json","utf8"));process.stdout.write(m.expectedSha256)')"
+          ACTUAL="$(sha256sum /tmp/tabcnn-f16.gguf | awk '{print $1}')"
+          test "$EXPECTED" = "$ACTUAL"
+
+      - name: Verify TabCNN tuning metadata from GGUF
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from gguf import GGUFReader
+
+          manifest = json.load(open("config/models/tabcnn-f16.json", "r", encoding="utf-8"))
+          reader = GGUFReader("/tmp/tabcnn-f16.gguf")
+          field = reader.fields.get("tabcnn.tuning")
+          if field is None:
+              raise SystemExit("tabcnn.tuning missing from verified GGUF")
+          actual = [bytes(field.parts[offset]).decode("utf-8") for offset in field.data]
+          expected = manifest["tuning"]
+          if actual != expected:
+              raise SystemExit(f"tabcnn.tuning mismatch: expected={expected} actual={actual}")
+          print(json.dumps({"tabcnn.tuning": actual, "openMidiByString": manifest["openMidiByString"]}))
+          PY
+
+      - name: Download rights-clean EGSet12 real guitar fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -L --fail --retry 3 --retry-delay 2 \
+            -o /tmp/egset12-01.wav \
+            "https://zenodo.org/records/11406378/files/01.wav?download=1"
+          echo "2eb739c5fb73e6327bb47267afe3eddf  /tmp/egset12-01.wav" | md5sum -c -
+
+      - name: Run real Basic Pitch on EGSet12
+        run: |
+          node scripts/basicPitchEventsForTabCnnBenchmark.mjs \
+            .integration/st-omr-correction-engine/providers/basic-pitch/basicPitchProvider.js \
+            /tmp/egset12-01.wav \
+            /tmp/egset12-basic-pitch.json
+
+      - name: Run real TabCNN benchmark twice
+        env:
+          ST_TABCNN_CRISPASR_BIN: ${{ github.workspace }}/.integration/CrispASR/build/bin/crispasr
+          ST_TABCNN_MODEL_PATH: /tmp/tabcnn-f16.gguf
+          ST_TABCNN_MANIFEST_PATH: ${{ github.workspace }}/config/models/tabcnn-f16.json
+          ST_TABCNN_BENCHMARK_AUDIO: /tmp/egset12-01.wav
+          ST_TABCNN_BENCHMARK_BASIC_PITCH_JSON: /tmp/egset12-basic-pitch.json
+        run: |
+          set -euo pipefail
+          node scripts/benchmark-tabcnn-provider.mjs > /tmp/tabcnn-benchmark-a.json
+          node scripts/benchmark-tabcnn-provider.mjs > /tmp/tabcnn-benchmark-b.json
+          node --input-type=module - <<'NODE'
+          import { readFileSync } from 'node:fs';
+          const a = JSON.parse(readFileSync('/tmp/tabcnn-benchmark-a.json', 'utf8'));
+          const b = JSON.parse(readFileSync('/tmp/tabcnn-benchmark-b.json', 'utf8'));
+          if (a.providerStatus !== 'READY') throw new Error('TabCNN provider was not READY.');
+          if (a.authority !== 'SHADOW_EVIDENCE_ONLY') throw new Error('TabCNN authority boundary changed.');
+          if (a.predictionDigestSha256 !== b.predictionDigestSha256) throw new Error('TabCNN predictions were not deterministic.');
+          if (a.rawFrameCount < 1 || a.predictionCount < 1) throw new Error('Real TabCNN inference returned no evidence.');
+          console.log(JSON.stringify(a, null, 2));
+          NODE
+
+      - name: Record benchmark attribution and summary
+        shell: bash
+        run: |
+          {
+            echo "### S13.2 real TabCNN benchmark"
+            echo ""
+            echo "- Audio: EGSet12 01.wav, CC BY 4.0, Zenodo record 11406378"
+            echo "- Required citation: Pedroza, Abreu, Corey, Roman, DAFx 2024"
+            echo "- Model: cstr/tabcnn-GGUF tabcnn-f16.gguf, CC BY 4.0"
+            echo "- CrispASR commit: e4b59c9fb97a155da91395862e2fa26f77f1c7c7"
+            echo "- Basic Pitch provider host: 122725676cb1f2cb0eddb05d791bd11abea13b32"
+            echo ""
+            cat /tmp/tabcnn-benchmark-a.json
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload benchmark report only
+        uses: actions/upload-artifact@v4
+        with:
+          name: s13-2-tabcnn-real-benchmark
+          path: /tmp/tabcnn-benchmark-a.json
+          if-no-files-found: error

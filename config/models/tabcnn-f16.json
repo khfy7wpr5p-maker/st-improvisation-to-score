@@ -1,0 +1,38 @@
+{
+  "schemaVersion": "st-model-artifact-manifest-v0.1",
+  "providerId": "tabcnn",
+  "runtime": "crispasr",
+  "runtimeRepository": "CrispStrobe/CrispASR",
+  "runtimeCommit": "e4b59c9fb97a155da91395862e2fa26f77f1c7c7",
+  "modelRepository": "cstr/tabcnn-GGUF",
+  "modelFilename": "tabcnn-f16.gguf",
+  "artifactUrl": "https://huggingface.co/cstr/tabcnn-GGUF/resolve/main/tabcnn-f16.gguf",
+  "artifactSizeBytes": 1781824,
+  "license": "CC-BY-4.0",
+  "sourceRecord": "https://zenodo.org/records/11406378",
+  "sourceArtifactSha256": "1470a308896629352a811082843eb708cbc2f1aa3092757340055ef76a53ed0c",
+  "expectedSha256": "9582536ba2c43ad35e56d70d4fa150f9ca01dd22c38feeaa54bf0315bd89972c",
+  "architecture": "tabcnn",
+  "tuning": [
+    "E2",
+    "A2",
+    "D3",
+    "G3",
+    "B3",
+    "E4"
+  ],
+  "openMidiByString": [
+    40,
+    45,
+    50,
+    55,
+    59,
+    64
+  ],
+  "authority": "SHADOW_EVIDENCE_ONLY",
+  "checksumEvidence": {
+    "workflow": "TabCNN Artifact Provenance",
+    "runId": 35283053695,
+    "observedAt": "2026-09-17T22:38:54Z"
+  }
+}
