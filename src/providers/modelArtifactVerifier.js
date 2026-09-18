@@ -8,6 +8,8 @@ const REQUIRED_MANIFEST_FIELDS = Object.freeze([
   'schemaVersion',
   'providerId',
   'runtime',
+  'runtimeRepository',
+  'runtimeCommit',
   'modelRepository',
   'modelFilename',
   'license',
@@ -41,6 +43,28 @@ function normalizeOpenMidiByString(value) {
   return Object.freeze([...value]);
 }
 
+function scientificPitchToMidi(value, field) {
+  const match = /^([A-Ga-g])([#b]?)(-?\d+)$/.exec(value);
+  if (!match) throw new TypeError(`${field} must use scientific pitch notation.`);
+  const semitones = Object.freeze({ C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 });
+  let semitone = semitones[match[1].toUpperCase()];
+  if (match[2] === '#') semitone += 1;
+  if (match[2] === 'b') semitone -= 1;
+  const octave = Number(match[3]);
+  const midi = (octave + 1) * 12 + semitone;
+  if (!Number.isInteger(midi) || midi < 0 || midi > 127) {
+    throw new TypeError(`${field} resolves outside MIDI range 0..127.`);
+  }
+  return midi;
+}
+
+function validateRuntimeCommit(value) {
+  if (!/^[a-f0-9]{40}$/.test(value)) {
+    throw new TypeError('runtimeCommit must be lowercase 40-hex.');
+  }
+  return value;
+}
+
 export function validateModelArtifactManifest(manifest) {
   if (!manifest || typeof manifest !== 'object' || Array.isArray(manifest)) {
     throw new TypeError('model artifact manifest must be a plain object.');
@@ -54,15 +78,23 @@ export function validateModelArtifactManifest(manifest) {
 
   sha256Hex(manifest.sourceArtifactSha256, 'sourceArtifactSha256');
   sha256Hex(manifest.expectedSha256, 'expectedSha256');
+  validateRuntimeCommit(manifest.runtimeCommit);
 
   if (manifest.authority !== 'SHADOW_EVIDENCE_ONLY') {
     throw new TypeError('model artifact authority must remain SHADOW_EVIDENCE_ONLY.');
   }
 
+  const tuning = normalizeTuning(manifest.tuning);
+  const openMidiByString = normalizeOpenMidiByString(manifest.openMidiByString);
+  const derivedOpenMidi = tuning.map((pitch, index) => scientificPitchToMidi(pitch, `tuning[${index}]`));
+  if (derivedOpenMidi.some((midi, index) => midi !== openMidiByString[index])) {
+    throw new TypeError('openMidiByString must exactly match the pinned tuning pitches.');
+  }
+
   return Object.freeze({
     ...manifest,
-    tuning: normalizeTuning(manifest.tuning),
-    openMidiByString: normalizeOpenMidiByString(manifest.openMidiByString),
+    tuning,
+    openMidiByString,
   });
 }
 
