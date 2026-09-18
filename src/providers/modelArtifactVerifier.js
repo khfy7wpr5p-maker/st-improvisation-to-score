@@ -2,7 +2,7 @@ import { createReadStream } from 'node:fs';
 import { access } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 
-export const MODEL_ARTIFACT_VERIFIER_VERSION = '0.1.0';
+export const MODEL_ARTIFACT_VERIFIER_VERSION = '0.2.0';
 
 const REQUIRED_MANIFEST_FIELDS = Object.freeze([
   'schemaVersion',
@@ -25,6 +25,22 @@ function sha256Hex(value, field) {
   return value;
 }
 
+function normalizeTuning(value) {
+  if (!Array.isArray(value) || value.length !== 6 ||
+      value.some((entry) => typeof entry !== 'string' || entry.length === 0 || entry.length > 16)) {
+    throw new TypeError('tuning must contain exactly six non-empty pitch-name strings.');
+  }
+  return Object.freeze([...value]);
+}
+
+function normalizeOpenMidiByString(value) {
+  if (!Array.isArray(value) || value.length !== 6 ||
+      value.some((entry) => !Number.isInteger(entry) || entry < 0 || entry > 127)) {
+    throw new TypeError('openMidiByString must contain exactly six MIDI integers in 0..127.');
+  }
+  return Object.freeze([...value]);
+}
+
 export function validateModelArtifactManifest(manifest) {
   if (!manifest || typeof manifest !== 'object' || Array.isArray(manifest)) {
     throw new TypeError('model artifact manifest must be a plain object.');
@@ -43,7 +59,11 @@ export function validateModelArtifactManifest(manifest) {
     throw new TypeError('model artifact authority must remain SHADOW_EVIDENCE_ONLY.');
   }
 
-  return Object.freeze({ ...manifest });
+  return Object.freeze({
+    ...manifest,
+    tuning: normalizeTuning(manifest.tuning),
+    openMidiByString: normalizeOpenMidiByString(manifest.openMidiByString),
+  });
 }
 
 async function sha256File(artifactPath) {
