@@ -84,18 +84,21 @@ export function validateModelArtifactManifest(manifest) {
     throw new TypeError('model artifact authority must remain SHADOW_EVIDENCE_ONLY.');
   }
 
-  const tuning = normalizeTuning(manifest.tuning);
-  const openMidiByString = normalizeOpenMidiByString(manifest.openMidiByString);
-  const derivedOpenMidi = tuning.map((pitch, index) => scientificPitchToMidi(pitch, `tuning[${index}]`));
-  if (derivedOpenMidi.some((midi, index) => midi !== openMidiByString[index])) {
-    throw new TypeError('openMidiByString must exactly match the pinned tuning pitches.');
+  if (manifest.providerId === 'tabcnn') {
+    const tuning = normalizeTuning(manifest.tuning);
+    const openMidiByString = normalizeOpenMidiByString(manifest.openMidiByString);
+    const derivedOpenMidi = tuning.map((pitch, index) => scientificPitchToMidi(pitch, `tuning[${index}]`));
+    if (derivedOpenMidi.some((midi, index) => midi !== openMidiByString[index])) {
+      throw new TypeError('openMidiByString must exactly match the pinned tuning pitches.');
+    }
+    return Object.freeze({
+      ...manifest,
+      tuning,
+      openMidiByString,
+    });
   }
 
-  return Object.freeze({
-    ...manifest,
-    tuning,
-    openMidiByString,
-  });
+  return Object.freeze({ ...manifest });
 }
 
 async function sha256File(artifactPath) {
