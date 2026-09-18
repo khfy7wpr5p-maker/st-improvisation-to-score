@@ -71,6 +71,20 @@ test('rejects malformed or non-shadow manifests', () => {
   );
 });
 
+test('keeps the artifact verifier provider-agnostic outside TabCNN', () => {
+  const input = {
+    ...manifest('a'.repeat(64)),
+    providerId: 'fretnet',
+  };
+  delete input.tuning;
+  delete input.openMidiByString;
+
+  const result = validateModelArtifactManifest(input);
+  assert.equal(result.providerId, 'fretnet');
+  assert.equal(result.tuning, undefined);
+  assert.equal(result.openMidiByString, undefined);
+});
+
 test('verifies exact model bytes against pinned sha256', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'st-tabcnn-'));
   const artifactPath = join(dir, 'model.gguf');
