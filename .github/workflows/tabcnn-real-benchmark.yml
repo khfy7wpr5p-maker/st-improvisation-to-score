@@ -49,13 +49,24 @@ jobs:
           cache: pip
           cache-dependency-path: .integration/st-omr-correction-engine/providers/basic-pitch/requirements.txt
 
+      - name: Install pinned GGUF metadata reader
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check "gguf==0.19.0"
+
       - name: Preflight GGUF metadata reader
         shell: bash
         run: |
           set -euo pipefail
           python - <<'PY'
+          from importlib.metadata import version
           from gguf import GGUFReader
-          print(f"GGUFReader import OK: {GGUFReader.__name__}")
+
+          actual = version("gguf")
+          if actual != "0.19.0":
+              raise SystemExit(f"unexpected gguf version: {actual}")
+          print(f"GGUFReader import OK: {GGUFReader.__name__} gguf={actual}")
           PY
 
       - name: Install Basic Pitch provider host
@@ -109,7 +120,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          PYTHONPATH=".integration/CrispASR/ggml/gguf-py" python - <<'PY'
+          python - <<'PY'
           import json
           from gguf import GGUFReader
 
