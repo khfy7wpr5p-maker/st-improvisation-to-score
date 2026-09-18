@@ -11,7 +11,7 @@ import {
   verifyModelArtifact,
 } from '../../src/providers/modelArtifactVerifier.js';
 
-const PROVIDER_VERSION = 'tabcnn-crispasr-provider-v0.1';
+const PROVIDER_VERSION = 'tabcnn-crispasr-provider-v0.2';
 const MAX_STDOUT_BYTES = 16 * 1024 * 1024;
 
 function requiredEnv(name) {
@@ -117,6 +117,8 @@ try {
       ...artifact,
       providerId: manifest.providerId,
       runtime: manifest.runtime,
+      runtimeRepository: manifest.runtimeRepository,
+      runtimeCommit: manifest.runtimeCommit,
       modelRepository: manifest.modelRepository,
       modelFilename: manifest.modelFilename,
       license: manifest.license,
