@@ -82,7 +82,7 @@ jobs:
           curl -L --fail --retry 3 --retry-delay 2 \
             -o /tmp/tabcnn-f16.gguf \
             "https://huggingface.co/cstr/tabcnn-GGUF/resolve/main/tabcnn-f16.gguf"
-          EXPECTED="$(node -e \"const fs=require('fs');const m=JSON.parse(fs.readFileSync('config/models/tabcnn-f16.json','utf8'));process.stdout.write(m.expectedSha256)\")"
+          EXPECTED="$(node -e 'const fs=require("fs");const m=JSON.parse(fs.readFileSync("config/models/tabcnn-f16.json","utf8"));process.stdout.write(m.expectedSha256)')"
           ACTUAL="$(sha256sum /tmp/tabcnn-f16.gguf | awk '{print $1}')"
           test "$EXPECTED" = "$ACTUAL"
 
