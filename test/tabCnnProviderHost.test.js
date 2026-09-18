@@ -132,6 +132,23 @@ test('missing CrispASR executable cannot become READY', async () => {
   assert.notEqual(result.status, 'READY');
 });
 
+test('hung CrispASR process times out without becoming READY', async () => {
+  const { audioPath, env } = await setup({ fakeMode: 'hang' });
+  env.ST_TABCNN_CRISPASR_TIMEOUT_MS = '100';
+
+  const result = await runExternalGuitarEvidenceProvider({
+    providerId: 'tabcnn',
+    audioPath,
+    command: process.execPath,
+    args: [providerScript],
+    env,
+    timeoutMs: 2000,
+  });
+
+  assert.notEqual(result.status, 'READY');
+  assert.match(result.stderr ?? '', /timed out/i);
+});
+
 test('malformed CrispASR JSON cannot become READY', async () => {
   const { audioPath, env } = await setup({ fakeMode: 'malformed' });
 
