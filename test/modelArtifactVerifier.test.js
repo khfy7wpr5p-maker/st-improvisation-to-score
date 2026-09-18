@@ -18,6 +18,8 @@ function manifest(expectedSha256) {
     schemaVersion: 'st-model-artifact-manifest-v0.1',
     providerId: 'tabcnn',
     runtime: 'crispasr',
+    runtimeRepository: 'CrispStrobe/CrispASR',
+    runtimeCommit: 'e4b59c9fb97a155da91395862e2fa26f77f1c7c7',
     modelRepository: 'cstr/tabcnn-GGUF',
     modelFilename: 'tabcnn-f16.gguf',
     license: 'CC-BY-4.0',
@@ -58,6 +60,14 @@ test('rejects malformed or non-shadow manifests', () => {
   assert.throws(
     () => validateModelArtifactManifest({ ...manifest('a'.repeat(64)), tuning: ['E2'] }),
     /tuning/,
+  );
+  assert.throws(
+    () => validateModelArtifactManifest({ ...manifest('a'.repeat(64)), openMidiByString: [41, 45, 50, 55, 59, 64] }),
+    /exactly match/,
+  );
+  assert.throws(
+    () => validateModelArtifactManifest({ ...manifest('a'.repeat(64)), runtimeCommit: 'not-a-commit' }),
+    /runtimeCommit/,
   );
 });
 
