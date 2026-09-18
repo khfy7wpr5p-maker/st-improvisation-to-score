@@ -1,0 +1,169 @@
+{
+  "schema_version": "1.0.0",
+  "document_type": "AUTONOMOUS_DEVELOPER_HANDOFF",
+  "project": {
+    "name": "ST Improvisation to Score",
+    "repository": "khfy7wpr5p-maker/st-improvisation-to-score",
+    "pull_request": 35,
+    "branch": "s13-2-tabcnn-real-provider",
+    "task_id": "S13_2_TABCNN_REAL_PROVIDER_GGUF_METADATA_GATE_RECOVERY",
+    "date": "2026-09-18",
+    "execution_mode": "AUTONOMOUS_SAFE_CONTINUATION",
+    "primary_goal": "Recover the final S13.2 merge gate by fixing the GGUF tuning-metadata verifier environment without weakening model provenance, learned-evidence authority boundaries, or existing runtime conformance."
+  },
+  "required_method": {
+    "superpowers": [
+      "systematic-debugging",
+      "test-driven-development",
+      "verification-before-completion",
+      "requesting-code-review",
+      "finishing-a-development-branch"
+    ],
+    "rule": "Fresh-read the current PR head before edits. Do not guess. Root cause first, one hypothesis at a time, smallest safe fix, then verify every required gate on the same final HEAD."
+  },
+  "current_state": {
+    "pr_state": "OPEN_DRAFT_MERGEABLE",
+    "merge_allowed_now": false,
+    "latest_observed_head_before_handoff_docs": "0190b0ca88e747f508e64be0be80fa103d3bfd27",
+    "note": "Documentation commits may move HEAD. Treat the branch/PR as source of truth and fresh-read at start.",
+    "passed_on_latest_observed_head": [
+      "CI",
+      "Score Editor Runtime Conformance",
+      "Guitar TAB Runtime Conformance",
+      "Real Audio End-to-End Conformance",
+      "TabCNN Artifact Provenance"
+    ],
+    "failing_on_latest_observed_head": [
+      "TabCNN Real Guitar Benchmark"
+    ]
+  },
+  "verified_real_provider_evidence": {
+    "basic_pitch_normalized_events": 272,
+    "tabcnn_provider_status": "READY",
+    "tabcnn_raw_frames": 1292,
+    "projected_string_fret_observations": 1921,
+    "basic_pitch_events_with_tabcnn_support": 147,
+    "unmatched_evidence_count": 103,
+    "position_disagreement_event_count": 26,
+    "deterministic_prediction_digest_sha256": "e0f9c3492591e5c290a0c0760d06e5d5c472c7881d2f673160e22b566e4762aa",
+    "tabcnn_f16_sha256": "9582536ba2c43ad35e56d70d4fa150f9ca01dd22c38feeaa54bf0315bd89972c",
+    "authority": "SHADOW_EVIDENCE_ONLY",
+    "interpretation": "Engineering/runtime evidence only. Do not claim musical-quality improvement from these numbers."
+  },
+  "current_blocker": {
+    "workflow": "TabCNN Real Guitar Benchmark",
+    "latest_observed_run_number": 30,
+    "latest_observed_run_id": 35315256584,
+    "failing_step": "Verify TabCNN tuning metadata from GGUF",
+    "exact_error": "ModuleNotFoundError: No module named 'gguf'",
+    "failure_occurs_after": [
+      "pinned CrispASR runtime verification passes",
+      "CrispASR CLI build passes",
+      "TabCNN F16 download passes",
+      "exact model SHA-256 verification passes"
+    ]
+  },
+  "root_cause_evidence": {
+    "workflow_pythonpath": ".integration/CrispASR/ggml/gguf-py",
+    "crispasr_commit": "e4b59c9fb97a155da91395862e2fa26f77f1c7c7",
+    "pinned_ggml_submodule_commit": "2dd13eddc783f2cd0a29324affd78081cc6f0034",
+    "confirmed_fact": "The pinned CrispStrobe/ggml tree does not contain a gguf-py directory, so the workflow points PYTHONPATH at a nonexistent package path.",
+    "classification": "CI metadata-verifier environment defect",
+    "not_indicated_by_current_evidence": [
+      "TabCNN model corruption",
+      "CrispASR build failure",
+      "Basic Pitch regression",
+      "MusicXML generation regression"
+    ]
+  },
+  "immutable_architecture_constraints": [
+    "Basic Pitch remains the score-generation note/onset source.",
+    "TabCNN remains SHADOW_EVIDENCE_ONLY.",
+    "TabCNN may not delete Basic Pitch notes, create/remove score voices, force final fingering, override teacher corrections, or block MusicXML.",
+    "Missing/mismatched model, unavailable executable, malformed provider output, timeout, or learned-provider failure remains non-blocking for score generation.",
+    "Do not commit model binaries or private user audio.",
+    "FretNet remains deferred until a separately verified checkpoint/provenance gate exists.",
+    "Do not weaken or skip exact model SHA-256 verification or runtime commit pinning."
+  ],
+  "execution_plan": [
+    {
+      "id": "RC_01",
+      "action": "Fresh-read PR #35, branch HEAD, workflow file, model manifest, S13.2 docs, and latest failing job logs.",
+      "acceptance": "Observed failure still matches the recorded gguf import/path defect or the handoff is updated before any fix."
+    },
+    {
+      "id": "RC_02",
+      "action": "Reproduce the gguf import failure with a cheap preflight equivalent before the expensive real-guitar benchmark.",
+      "acceptance": "Failure is deterministic and isolated from model inference."
+    },
+    {
+      "id": "RC_03",
+      "action": "Inspect the pinned CrispASR/ggml source tree and existing CrispASR patterns for making GGUFReader available. Compare working reference usage before selecting a fix.",
+      "acceptance": "Chosen approach is tied to the pinned runtime and does not rely on an unpinned ambient package."
+    },
+    {
+      "id": "RC_04",
+      "action": "Write or extend a failing test/preflight that proves the metadata reader dependency/path is available and can read tabcnn.tuning from the exact verified GGUF.",
+      "acceptance": "Test fails before implementation for the same root cause."
+    },
+    {
+      "id": "RC_05",
+      "action": "Implement the smallest deterministic fix. Prefer a pinned/reproducible dependency or a repository/runtime-native metadata reader path. Do not remove tuning verification.",
+      "acceptance": "Cheap preflight passes and exact tuning is compared to config/models/tabcnn-f16.json."
+    },
+    {
+      "id": "RC_06",
+      "action": "Run the TabCNN Real Guitar Benchmark on the new HEAD and confirm READY + deterministic prediction digest.",
+      "acceptance": "Benchmark succeeds and reports the pinned artifact hash, tuning, frame/prediction counts, and SHADOW_EVIDENCE_ONLY."
+    },
+    {
+      "id": "RC_07",
+      "action": "Run all six required gates on one exact final HEAD.",
+      "acceptance": "CI, Score Editor Runtime, Guitar TAB Runtime, Real Audio E2E, TabCNN Artifact Provenance, and TabCNN Real Guitar Benchmark are all SUCCESS on that exact HEAD."
+    },
+    {
+      "id": "RC_08",
+      "action": "Fresh-read PR head after all workflows complete; verify no later commit invalidated the green runs.",
+      "acceptance": "PR HEAD equals the SHA tested by all six gates."
+    },
+    {
+      "id": "RC_09",
+      "action": "Update docs/S13_2_TABCNN_REAL_PROVIDER.md and PR #35 body with final root cause, fix, exact successful workflow IDs, final HEAD, and benchmark evidence.",
+      "acceptance": "No stale successful-run or blocker statements remain."
+    },
+    {
+      "id": "RC_10",
+      "action": "Merge PR #35 only if every acceptance condition is satisfied.",
+      "acceptance": "Merge uses expected_head_sha protection and new main SHA is reported."
+    }
+  ],
+  "do_not_do": [
+    "Do not silence or delete the GGUF tuning metadata check just to make CI green.",
+    "Do not replace exact SHA/runtime pins with floating latest versions.",
+    "Do not promote TabCNN to canonical/source-truth authority.",
+    "Do not change Basic Pitch admission/reconstruction behavior as part of this blocker fix.",
+    "Do not bundle unrelated refactors, FretNet work, browser inference, or playable TAB decoding into this recovery.",
+    "Do not claim musical transcription quality improved unless a separate human-reviewed quality evaluation supports it.",
+    "Do not merge with one red, skipped, stale, or differently-headed required gate."
+  ],
+  "required_final_report": {
+    "include": [
+      "root cause",
+      "files changed",
+      "tests added/changed",
+      "final PR head SHA",
+      "six workflow names + run IDs + conclusions",
+      "real benchmark summary",
+      "merge result and new main SHA if merged",
+      "remaining deferred work"
+    ],
+    "verdict_format": "Use explicit ✅/❌ and distinguish runtime success from musical-quality evidence."
+  },
+  "source_documents": [
+    "docs/S13_2_TABCNN_REAL_PROVIDER.md",
+    "docs/superpowers/specs/2026-09-17-s13-2-tabcnn-model-artifact-design.md",
+    "docs/superpowers/plans/2026-09-17-s13-2-tabcnn-model-artifact-implementation.md",
+    ".github/workflows/tabcnn-real-benchmark.yml",
+    "config/models/tabcnn-f16.json"
+  ]
+}
