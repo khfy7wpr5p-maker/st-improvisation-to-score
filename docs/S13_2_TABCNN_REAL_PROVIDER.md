@@ -24,9 +24,11 @@ The production authority boundary remains:
 - Source record: `https://zenodo.org/records/11406378`
 - Exact GGUF SHA-256: `9582536ba2c43ad35e56d70d4fa150f9ca01dd22c38feeaa54bf0315bd89972c`
 - Exact GGUF size: `1781824` bytes
+- Pinned tuning: `E2 A2 D3 G3 B3 E4`
+- Pinned open-string MIDI: `40 45 50 55 59 64`
 - Source artifact provenance SHA-256: `1470a308896629352a811082843eb708cbc2f1aa3092757340055ef76a53ed0c`
 
-The exact GGUF checksum is enforced by `config/models/tabcnn-f16.json` and independently rechecked by the TabCNN Artifact Provenance workflow.
+The exact GGUF checksum is enforced by `config/models/tabcnn-f16.json` and independently rechecked by the TabCNN Artifact Provenance workflow. The real-guitar benchmark also reads `tabcnn.tuning` directly from the verified GGUF and requires it to match the pinned manifest before inference evidence is accepted.
 
 No model binary is committed to this repository. Normal score generation never silently downloads or replaces model weights.
 
@@ -43,6 +45,8 @@ The subprocess boundary uses `shell: false`. Before CrispASR is started, the loc
 ## Evidence semantics
 
 CrispASR exposes TabCNN as frame-level six-string fret emissions. S13.2 preserves that raw frame evidence and projects bounded note-like observations for the existing `GuitarEvidenceFusion` interface.
+
+The projection never assumes a generic standard tuning. It receives `openMidiByString` from the validated model manifest, whose pitch-name tuning is cross-checked against the verified GGUF.
 
 The projection records:
 
