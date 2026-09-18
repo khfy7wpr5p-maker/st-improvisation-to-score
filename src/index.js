@@ -120,7 +120,6 @@ export {
 
 export {
   TABCNN_CRISPASR_BRIDGE_VERSION,
-  TABCNN_STANDARD_OPEN_MIDI_LOW_TO_HIGH,
   parseCrispAsrTabJson,
   projectTabCnnFramesToPredictions,
 } from './providers/tabCnnCrispAsr.js';
