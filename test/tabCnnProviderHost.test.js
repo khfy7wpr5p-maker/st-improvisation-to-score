@@ -173,5 +173,7 @@ test('hosted pipeline preserves Basic Pitch and exposes provider diagnostics', a
   assert.equal(result.authority, 'SHADOW_EVIDENCE_ONLY');
   assert.equal(result.hostResults[0].status, 'READY');
   assert.equal(result.providerDiagnostics.tabcnn.artifactStatus, 'VERIFIED');
+  assert.equal(result.providerDiagnostics.tabcnn.runtimeCommit, 'e4b59c9fb97a155da91395862e2fa26f77f1c7c7');
+  assert.deepEqual(result.providerDiagnostics.tabcnn.openMidiByString, [40, 45, 50, 55, 59, 64]);
   assert.ok(result.providerDiagnostics.tabcnn.rawFrameCount > 0);
 });
