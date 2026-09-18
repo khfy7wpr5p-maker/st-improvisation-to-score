@@ -1,5 +1,4 @@
-export const TABCNN_CRISPASR_BRIDGE_VERSION = '0.1.0';
-export const TABCNN_STANDARD_OPEN_MIDI_LOW_TO_HIGH = Object.freeze([40, 45, 50, 55, 59, 64]);
+export const TABCNN_CRISPASR_BRIDGE_VERSION = '0.2.0';
 
 function finiteNumber(value, field, { min = -Infinity, exclusiveMin = false } = {}) {
   const n = Number(value);
@@ -15,6 +14,14 @@ function integer(value, field, { min = -Infinity, max = Infinity } = {}) {
     throw new TypeError(`${field} must be an integer between ${min} and ${max}.`);
   }
   return n;
+}
+
+function normalizeOpenMidiByString(value, nStrings) {
+  if (!Array.isArray(value) || value.length !== nStrings) {
+    throw new TypeError(`openMidiByString must contain exactly ${nStrings} entries from the verified model manifest.`);
+  }
+  return Object.freeze(value.map((entry, index) =>
+    integer(entry, `openMidiByString[${index}]`, { min: 0, max: 127 })));
 }
 
 function freezeFret(entry, frameIndex, stringIndex, nClasses, silentClass) {
@@ -90,10 +97,11 @@ function confidenceFromLogProbability(logp) {
   return Math.max(0, Math.min(1, p));
 }
 
-export function projectTabCnnFramesToPredictions(parsedInput) {
+export function projectTabCnnFramesToPredictions(parsedInput, options = {}) {
   const parsed = parsedInput?.schemaVersion === 'crispasr-tabcnn-shadow-v0.1'
     ? parsedInput
     : parseCrispAsrTabJson(parsedInput);
+  const openMidiByString = normalizeOpenMidiByString(options.openMidiByString, parsed.nStrings);
 
   const predictions = [];
   parsed.frames.forEach((frame, frameIndex) => {
@@ -101,10 +109,15 @@ export function projectTabCnnFramesToPredictions(parsedInput) {
       if (entry.fret < 0) return;
       const onsetSeconds = frame.time;
       const offsetSeconds = onsetSeconds + parsed.framePeriodSeconds;
+      const midiPitch = integer(
+        openMidiByString[stringIndex] + entry.fret,
+        `projectedMidiPitch[${frameIndex}][${stringIndex}]`,
+        { min: 0, max: 127 },
+      );
       predictions.push(Object.freeze({
         onsetSeconds,
         offsetSeconds,
-        midiPitch: TABCNN_STANDARD_OPEN_MIDI_LOW_TO_HIGH[stringIndex] + entry.fret,
+        midiPitch,
         stringIndex: stringIndex + 1,
         fret: entry.fret,
         confidence: confidenceFromLogProbability(entry.logp),
@@ -112,6 +125,7 @@ export function projectTabCnnFramesToPredictions(parsedInput) {
           sourceShape: 'CRISPASR_TABCNN_FRAME_EMISSION',
           frameIndex,
           providerStringIndex0Based: stringIndex,
+          modelOpenMidi: openMidiByString[stringIndex],
           framePeriodSeconds: parsed.framePeriodSeconds,
           rawFrame: frame,
         }),
