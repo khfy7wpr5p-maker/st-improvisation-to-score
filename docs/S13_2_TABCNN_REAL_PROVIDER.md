@@ -1,6 +1,6 @@
 # S13.2 TabCNN Real Provider
 
-Status: IMPLEMENTED_WITH_REAL_BENCHMARK_EVIDENCE_CURRENT_HEAD_BLOCKED_BY_GGUF_METADATA_VERIFIER_ENVIRONMENT  
+Status: IMPLEMENTED_WITH_REAL_BENCHMARK_EVIDENCE_GGUF_METADATA_GATE_RECOVERED_PENDING_FINAL_PR_HEAD_REVALIDATION  
 Date: 2026-09-18
 
 ## Purpose
@@ -54,7 +54,7 @@ The projection records:
 - one-based score-side string index `1..6`
 - original zero-based provider string index in metadata
 - fret
-- MIDI pitch implied by standard guitar tuning
+- MIDI pitch implied by the verified model manifest tuning
 - confidence derived from emitted log probability when present
 - raw frame provenance
 
@@ -63,8 +63,8 @@ These observations are evidence only. They are not a decided playable TAB and do
 ## Real benchmark evidence
 
 Workflow: `TabCNN Real Guitar Benchmark`  
-Successful run: `#3` / run id `35313285528`  
-Head SHA: `30c23607f9b7462a2c9ce965f93aa804d4497f7f`
+Successful recovery run: `#34` / run id `35391558358`  
+Implementation verification head: `9abc49d05efbb88396f318dd6fc110a2ddf41190`
 
 Benchmark input:
 
@@ -78,57 +78,51 @@ Observed TabCNN/CrispASR result:
 
 - provider status: `READY`
 - artifact SHA-256: `9582536ba2c43ad35e56d70d4fa150f9ca01dd22c38feeaa54bf0315bd89972c`
-- inference elapsed time: `3830.341047 ms` for the recorded run
+- inference elapsed time: `3655.122438 ms` for the recorded recovery run
 - raw frame count: `1292`
 - projected prediction count: `1921`
 - Basic Pitch events with TabCNN support: `147`
 - unmatched evidence count: `103`
 - position-disagreement event count: `26`
-- prediction digest SHA-256: `e0f9c3492591e5c290a0c0760d06e5d5c472c7881d2f673160e22b566e4762aa`
+- prediction digest SHA-256: `8e4f662738586a32ca6f3420a64447c8f347a4ab43dca2f752f89f5695985d3f`
 - authority: `SHADOW_EVIDENCE_ONLY`
 
-The workflow executes the same audio/model/runtime tuple twice and requires the prediction digest to match. This benchmark passed.
+The workflow executes the same audio/model/runtime tuple twice and requires the prediction digest to match. Run `35391558358` passed this determinism check.
 
-These numbers are engineering evidence that the real provider runs deterministically through the pipeline. They are not evidence that musical transcription quality has improved. Musical-quality evaluation still requires human review on real guitar material.
+The digest differs from the older historical `e0f9...` evidence because the provider bridge advanced to v0.2 after that run and prediction objects now preserve verified manifest-derived tuning metadata such as `modelOpenMidi`. The current benchmark hashes the complete prediction objects, so that intentional evidence-shape change changes the digest. The current-head repeated runs still match each other.
 
-## Current merge blocker — GGUF metadata verifier environment
+These numbers are engineering/runtime evidence that the real provider runs deterministically through the pipeline. They are not evidence that musical transcription quality has improved. Musical-quality evaluation still requires human review on real guitar material.
 
-Latest observed PR state before this documentation update:
+## GGUF metadata verifier recovery
 
-- PR: `#35`
-- branch: `s13-2-tabcnn-real-provider`
-- observed head: `0190b0ca88e747f508e64be0be80fa103d3bfd27`
-- latest failing workflow: `TabCNN Real Guitar Benchmark` run `#30`, run id `35315256584`
-- failing step: `Verify TabCNN tuning metadata from GGUF`
-- exact error: `ModuleNotFoundError: No module named 'gguf'`
+Root cause:
 
-The failure happens after the following checks already succeed on that run:
-
-- checkout and dependency setup
-- pinned CrispASR runtime verification
-- CrispASR CLI build
-- exact TabCNN F16 model download
-- exact model SHA-256 verification
-
-Root cause evidence:
-
-- the workflow currently sets `PYTHONPATH=".integration/CrispASR/ggml/gguf-py"`
+- the benchmark workflow used `PYTHONPATH=".integration/CrispASR/ggml/gguf-py"`
 - pinned CrispASR commit `e4b59c9fb97a155da91395862e2fa26f77f1c7c7` points its `ggml` submodule at `CrispStrobe/ggml@2dd13eddc783f2cd0a29324affd78081cc6f0034`
-- that pinned ggml tree does not contain a `gguf-py` directory
-- therefore the metadata-verification step assumes a Python module path that is absent from the pinned runtime tree
+- that pinned ggml tree does not contain `gguf-py`
+- therefore `from gguf import GGUFReader` failed with `ModuleNotFoundError` even though the CrispASR build and exact model SHA verification were valid
 
-This is a CI metadata-verifier environment defect. Current evidence does **not** indicate a corrupt TabCNN model, a broken CrispASR build, or a regression in Basic Pitch / MusicXML generation.
+Recovery:
 
-The next developer must fresh-read the current PR head, reproduce this exact failure, identify the smallest deterministic way to make the GGUF metadata reader available or replace the invalid reader path, add a cheap preflight/failing test before the expensive real-guitar benchmark where practical, and rerun all required gates on one exact final HEAD.
+- added a cheap GGUF reader preflight before the expensive CrispASR build
+- first confirmed RED on run `35391444770`, where the preflight reproduced the same missing-module defect
+- pinned `gguf==0.19.0` in the benchmark environment
+- added a preflight that verifies the installed package version and imports `GGUFReader`
+- removed the nonexistent CrispASR-local `gguf-py` PYTHONPATH assumption
+- retained the existing exact model SHA-256 check, runtime commit pin, and direct `tabcnn.tuning` comparison against `config/models/tabcnn-f16.json`
 
-Do not merge PR #35 until these six gates are all successful on the same final HEAD:
+Recovery implementation commit: `9abc49d05efbb88396f318dd6fc110a2ddf41190`.
 
-1. `CI`
-2. `Score Editor Runtime Conformance`
-3. `Guitar TAB Runtime Conformance`
-4. `Real Audio End-to-End Conformance`
-5. `TabCNN Artifact Provenance`
-6. `TabCNN Real Guitar Benchmark`
+Six-gate verification on that implementation head:
+
+1. `CI` — SUCCESS — run `35391558236`
+2. `Score Editor Runtime Conformance` — SUCCESS — run `35391558264`
+3. `Guitar TAB Runtime Conformance` — SUCCESS — run `35391558275`
+4. `Real Audio End-to-End Conformance` — SUCCESS — run `35391558327`
+5. `TabCNN Artifact Provenance` — SUCCESS — run `35391558249`
+6. `TabCNN Real Guitar Benchmark` — SUCCESS — run `35391558358`
+
+This documentation update moves the PR head without changing runtime behavior. Merge remains prohibited until the same six required gates are successful on the then-current PR head. The PR body records the final current-head workflow IDs before merge.
 
 ## Failure behavior
 
