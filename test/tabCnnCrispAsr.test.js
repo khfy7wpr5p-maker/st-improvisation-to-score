@@ -46,6 +46,24 @@ test('projects non-silent frame decisions to one-frame string/fret observations'
   assert.ok(predictions.every((p) => p.confidence == null || (p.confidence >= 0 && p.confidence <= 1)));
 });
 
+
+test('uses explicitly pinned model tuning instead of a hard-coded guitar tuning', async () => {
+  const parsed = parseCrispAsrTabJson(await fixture());
+  const predictions = projectTabCnnFramesToPredictions(parsed, {
+    openMidiByString: [38, 43, 48, 53, 57, 62],
+  });
+
+  assert.deepEqual(
+    predictions.map((p) => [p.stringIndex, p.fret, p.midiPitch]),
+    [
+      [1, 1, 39],
+      [6, 0, 62],
+      [1, 1, 39],
+      [4, 2, 55],
+    ],
+  );
+});
+
 test('preserves the raw frame record for provenance', async () => {
   const parsed = parseCrispAsrTabJson(await fixture());
   const predictions = projectTabCnnFramesToPredictions(parsed);
