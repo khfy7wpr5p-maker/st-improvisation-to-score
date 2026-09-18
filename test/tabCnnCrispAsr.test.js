@@ -28,7 +28,9 @@ test('parses six-string CrispASR TabCNN frame evidence as shadow evidence', asyn
 
 test('projects non-silent frame decisions to one-frame string/fret observations', async () => {
   const parsed = parseCrispAsrTabJson(await fixture());
-  const predictions = projectTabCnnFramesToPredictions(parsed);
+  const predictions = projectTabCnnFramesToPredictions(parsed, {
+    openMidiByString: [40, 45, 50, 55, 59, 64],
+  });
 
   assert.equal(predictions.length, 4);
   assert.deepEqual(
@@ -66,7 +68,9 @@ test('uses explicitly pinned model tuning instead of a hard-coded guitar tuning'
 
 test('preserves the raw frame record for provenance', async () => {
   const parsed = parseCrispAsrTabJson(await fixture());
-  const predictions = projectTabCnnFramesToPredictions(parsed);
+  const predictions = projectTabCnnFramesToPredictions(parsed, {
+    openMidiByString: [40, 45, 50, 55, 59, 64],
+  });
 
   assert.deepEqual(predictions[0].metadata.rawFrame, parsed.frames[0]);
   assert.equal(predictions[0].metadata.frameIndex, 0);
