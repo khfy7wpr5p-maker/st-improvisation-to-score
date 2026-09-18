@@ -25,6 +25,8 @@ function manifest(expectedSha256) {
     sourceArtifactSha256: SOURCE_SHA,
     expectedSha256,
     architecture: 'tabcnn',
+    tuning: ['E2', 'A2', 'D3', 'G3', 'B3', 'E4'],
+    openMidiByString: [40, 45, 50, 55, 59, 64],
     authority: 'SHADOW_EVIDENCE_ONLY',
   };
 }
@@ -34,7 +36,10 @@ test('validates and freezes a complete shadow-only model manifest', () => {
   const result = validateModelArtifactManifest(input);
   assert.equal(result.authority, 'SHADOW_EVIDENCE_ONLY');
   assert.equal(result.expectedSha256, 'a'.repeat(64));
+  assert.deepEqual(result.openMidiByString, [40, 45, 50, 55, 59, 64]);
   assert.ok(Object.isFrozen(result));
+  assert.ok(Object.isFrozen(result.tuning));
+  assert.ok(Object.isFrozen(result.openMidiByString));
 });
 
 test('rejects malformed or non-shadow manifests', () => {
@@ -45,6 +50,14 @@ test('rejects malformed or non-shadow manifests', () => {
   assert.throws(
     () => validateModelArtifactManifest({ ...manifest('a'.repeat(64)), authority: 'SOURCE_TRUTH' }),
     /SHADOW_EVIDENCE_ONLY/,
+  );
+  assert.throws(
+    () => validateModelArtifactManifest({ ...manifest('a'.repeat(64)), openMidiByString: [40, 45] }),
+    /openMidiByString/,
+  );
+  assert.throws(
+    () => validateModelArtifactManifest({ ...manifest('a'.repeat(64)), tuning: ['E2'] }),
+    /tuning/,
   );
 });
 
