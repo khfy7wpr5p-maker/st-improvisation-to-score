@@ -39,6 +39,8 @@ async function setup({
     schemaVersion: 'st-model-artifact-manifest-v0.1',
     providerId: 'tabcnn',
     runtime: 'crispasr',
+    runtimeRepository: 'CrispStrobe/CrispASR',
+    runtimeCommit: 'e4b59c9fb97a155da91395862e2fa26f77f1c7c7',
     modelRepository: 'cstr/tabcnn-GGUF',
     modelFilename: 'tabcnn-f16.gguf',
     license: 'CC-BY-4.0',
